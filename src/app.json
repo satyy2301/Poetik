@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Poetik",
+    "slug": "poetik",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourname.poetik"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.yourname.poetik"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseKey": "YOUR_SUPABASE_KEY",
+      "huggingFaceToken": "YOUR_HF_TOKEN"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

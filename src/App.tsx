@@ -1,16 +1,16 @@
-// src/App.tsx
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { supabase } from './lib/supabase';
-import AppNavigator from './navigation/AppNavigator';
-import { AuthProvider } from './context/AuthContext';
+import 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SupabaseProvider } from './context/SupabaseContext';
+import Navigation from './navigation';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <SupabaseProvider>
+      <SafeAreaProvider>
+        <Navigation />
+        <StatusBar style="auto" />
+      </SafeAreaProvider>
+    </SupabaseProvider>
   );
 }
