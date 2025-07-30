@@ -1,5 +1,6 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase'; // Add this import
 import { getCurrentUser, signIn, signOut, signUp } from '../lib/auth';
 
 type AuthContextType = {
@@ -23,26 +24,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       checkUser();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      // Clean up any other subscriptions when component unmounts
+      const channel = supabase.channel('user_followers');
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
-      if (user) {
-      const followersChannel = supabase
-        .channel('user_followers')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'followers',
-          filter: `followee_id=eq.${user.id}`
-        }, (payload) => {
-          // Update your state/context when followers change
-          console.log('Follower change:', payload);
-        })
-        .subscribe();
+  useEffect(() => {
+    if (!user) return;
 
-      return () => {
-        supabase.removeChannel(followersChannel);
-      };
-    }
+    const followersChannel = supabase
+      .channel('user_followers')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'followers',
+        filter: `followee_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Follower change:', payload);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(followersChannel);
+    };
   }, [user]);
 
   const checkUser = async () => {

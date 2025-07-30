@@ -1,6 +1,16 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
+const config = getDefaultConfig(__dirname);
 
+config.resolver.sourceExts = [
+  ...config.resolver.sourceExts,
+  'ts',
+  'tsx',
+  'js',
+  'jsx',
+  'json',
+  'cjs'
+];
 // Create a default configuration
 const defaultConfig = getDefaultConfig(__dirname);
 
