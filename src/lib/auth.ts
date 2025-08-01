@@ -14,14 +14,14 @@ export const signUp = async (email: string, password: string, username: string) 
   });
 
   if (error) throw error;
-  
-  // Create user profile in public schema
+
   await supabase
-    .from('profiles')
+    .from('users') 
     .upsert({
-      id: data.user?.id,
+      id: data.user?.id, 
       username,
-      updated_at: new Date().toISOString()
+      avatar_url: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`,
+      created_at: new Date().toISOString()
     });
 
   return data;
