@@ -19,7 +19,7 @@ const SignupScreen = ({ navigation }) => {
     setIsLoading(true);
     try {
       await register(email, password, username);
-      navigation.replace('App');
+      navigation.navigate('App'); 
     } catch (error: any) {
       Alert.alert('Signup Failed', error.message);
     } finally {

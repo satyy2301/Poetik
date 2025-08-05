@@ -2,18 +2,23 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { toggleFollow, getUserFollowers, getUserFollowing } from '../features/follow/followService';
 import { getUserFavorites } from '../features/favorites/favoritesService';
 import { getUserPlaylists } from '../features/playlists/playlistService';
+import PoemCard from '../components/PoemCard';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = ({ route }) => {
   const { user: currentUser } = useAuth();
+  const navigation = useNavigation();
   const [user, setUser] = useState(route.params?.user || currentUser);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [favorites, setFavorites] = useState({ poems: [], poets: [] });
   const [playlists, setPlaylists] = useState([]);
+  const [userPoems, setUserPoems] = useState([]);
   const [activeTab, setActiveTab] = useState('poems');
 
   useEffect(() => {
@@ -47,12 +52,39 @@ const ProfileScreen = ({ route }) => {
     setFollowersCount(followers || 0);
     setFollowingCount(following || 0);
 
+    // Get user's published poems
+    const { data: poems, error: poemsError } = await supabase
+      .from('poems')
+      .select(`
+        id,
+        title,
+        content,
+        themes,
+        form,
+        like_count,
+        created_at,
+        author:author_id(id, name)
+      `)
+      .eq('author_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!poemsError && poems) {
+      // The poems already have the author data from the join
+      setUserPoems(poems);
+    } else if (poemsError) {
+      console.error('Error fetching poems:', poemsError);
+    }
+
     // Get favorites and playlists
-    const favs = await getUserFavorites(user.id);
-    const plists = await getUserPlaylists(user.id);
-    
-    setFavorites(favs);
-    setPlaylists(plists.data || []);
+    try {
+      const favs = await getUserFavorites(user.id);
+      const plists = await getUserPlaylists(user.id);
+      
+      setFavorites(favs);
+      setPlaylists(plists.data || []);
+    } catch (error) {
+      console.error('Error loading favorites/playlists:', error);
+    }
   };
 
   const handleFollowToggle = async () => {
@@ -63,10 +95,28 @@ const ProfileScreen = ({ route }) => {
     setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1);
   };
 
+  const handleViewPoem = (poem: any) => {
+    navigation.navigate('PoemDetail', { poem });
+  };
+
+  const handleLike = async (poemId: string) => {
+    const poemIndex = userPoems.findIndex(p => p.id === poemId);
+    if (poemIndex === -1) return;
+
+    const updatedPoems = [...userPoems];
+    updatedPoems[poemIndex] = {
+      ...updatedPoems[poemIndex],
+      like_count: (updatedPoems[poemIndex].like_count || 0) + 1
+    };
+    setUserPoems(updatedPoems);
+
+    await supabase.rpc('increment_likes', { poem_id: poemId });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.username}>@{user?.username}</Text>
+        <Text style={styles.username}>@{user?.email?.split('@')[0] || 'user'}</Text>
         
         {user?.id !== currentUser?.id && (
           <TouchableOpacity
@@ -89,6 +139,11 @@ const ProfileScreen = ({ route }) => {
         <TouchableOpacity style={styles.statItem}>
           <Text style={styles.statNumber}>{followingCount}</Text>
           <Text style={styles.statLabel}>Following</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.statItem}>
+          <Text style={styles.statNumber}>{userPoems.length}</Text>
+          <Text style={styles.statLabel}>Poems</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.statItem}>
@@ -122,8 +177,26 @@ const ProfileScreen = ({ route }) => {
 
       {activeTab === 'poems' && (
         <FlatList
-          data={[]} // Replace with user's poems
-          renderItem={({ item }) => <Text>{item.title}</Text>}
+          data={userPoems}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <PoemCard 
+              poem={item} 
+              onPress={() => handleViewPoem(item)}
+              onAuthorPress={() => {}} // No action needed since we're on profile
+              onLike={() => handleLike(item.id)}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                {user?.id === currentUser?.id 
+                  ? "You haven't published any poems yet" 
+                  : "This user hasn't published any poems yet"
+                }
+              </Text>
+            </View>
+          }
         />
       )}
       
@@ -247,6 +320,17 @@ const styles = StyleSheet.create({
   poemAuthor: {
     fontSize: 14,
     color: '#7f8c8d',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
   },
 });
 

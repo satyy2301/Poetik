@@ -6,6 +6,7 @@ import AppNavigator from './AppNavigator';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import LoadingScreen from '../screens/LoadingScreen';
+import PoemScreen from '../screens/PoemScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -20,7 +21,10 @@ const RootNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          <Stack.Screen name="App" component={AppNavigator} />
+          <>
+            <Stack.Screen name="App" component={AppNavigator} />
+            <Stack.Screen name="PoemDetail" component={PoemScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />

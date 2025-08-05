@@ -1,22 +1,32 @@
 // src/screens/PoemScreen.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Share } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Share, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 const PoemScreen = ({ route }) => {
-  const { poem } = route.params || {
+  const navigation = useNavigation();
+  const { poem } = route.params || {};
+  
+  // Fallback poem data if no poem is passed
+  const poemData = poem || {
     title: 'Morning Dew',
     content: 'Dewdrops hold the world in their crystal spheres—morning\'s first gift.',
-    author: 'River Stone',
+    author: { name: 'River Stone' },
     reads: 756,
-    likes: 423,
-    theme: 'Nature'
+    like_count: 423,
+    themes: ['Nature']
   };
+
+  // Handle both old structure (theme) and new structure (themes array)
+  const themeDisplay = poemData.themes && poemData.themes.length > 0 
+    ? poemData.themes[0] 
+    : poemData.theme || 'General';
 
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `${poem.title}\n\n${poem.content}\n\n- ${poem.author}`,
+        message: `${poemData.title}\n\n${poemData.content}\n\n- ${poemData.author?.name || poemData.author}`,
       });
     } catch (error) {
       alert(error.message);
@@ -34,20 +44,25 @@ const PoemScreen = ({ route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
+      {/* Back button */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={24} color="#2d3436" />
+      </TouchableOpacity>
+
       <View style={styles.poemContainer}>
-        <Text style={styles.themeTag}>{poem.theme}</Text>
-        <Text style={styles.title}>{poem.title}</Text>
-        <Text style={styles.content}>{poem.content}</Text>
-        <Text style={styles.author}>— {poem.author}</Text>
+        <Text style={styles.themeTag}>{themeDisplay}</Text>
+        <Text style={styles.title}>{poemData.title}</Text>
+        <Text style={styles.content}>{poemData.content}</Text>
+        <Text style={styles.author}>— {poemData.author?.name || poemData.author}</Text>
       </View>
       
       <View style={styles.statsContainer}>
-        <Text style={styles.reads}>{poem.reads} reads</Text>
+        <Text style={styles.reads}>{poemData.reads || 0} reads</Text>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
             <Ionicons name="heart-outline" size={24} color="#e17055" />
-            <Text style={styles.actionText}>{poem.likes}</Text>
+            <Text style={styles.actionText}>{poemData.like_count || poemData.likes || 0}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
@@ -61,20 +76,36 @@ const PoemScreen = ({ route }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 25,
     backgroundColor: '#f5f7fa',
+  },
+  backButton: {
+    marginTop: 50,
+    marginLeft: 20,
+    marginBottom: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   poemContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
     padding: 25,
+    margin: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.1,
@@ -113,6 +144,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   reads: {
     color: '#636e72',

@@ -1,16 +1,28 @@
 // src/screens/WriteScreen.tsx
 import React, { useState, useRef } from 'react';
-import { View, TextInput, Button, StyleSheet, Text , TouchableOpacity} from 'react-native';
+import { View, TextInput, Button, StyleSheet, Text , TouchableOpacity,Keyboard, Alert, Modal, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types'
-import keyboard from 'react-native-keyboard';
 import ionicons from 'react-native-vector-icons/Ionicons';
-import materialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
+
 // Define the props type for this screen
 type WriteScreenProps = NativeStackScreenProps<RootStackParamList, 'Write'>;
+
+// Poem categories/themes
+const POEM_CATEGORIES = [
+  'Romantic', 'Classic', 'Nature', 'Love', 'Melancholy', 'Joy', 'Spiritual', 
+  'Philosophy', 'Friendship', 'Family', 'Loss', 'Hope', 'Adventure', 'Dreams',
+  'Seasons', 'City Life', 'Rural', 'War', 'Peace', 'Freedom', 'Other'
+];
+
+const POEM_FORMS = [
+  'Free Verse', 'Sonnet', 'Haiku', 'Limerick', 'Ballad', 'Ode', 'Epic', 
+  'Lyric', 'Narrative', 'Acrostic', 'Cinquain', 'Tanka', 'Villanelle', 'Other'
+];
 
 const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const { user } = useAuth();
@@ -21,6 +33,10 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const [isFocused, setIsFocused] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+  const [selectedForm, setSelectedForm] = useState<string>('');
   const contentInputRef = useRef<TextInput>(null);
   const countSyllables = (text: string) => {
     // Simple syllable counter (can be enhanced)
@@ -78,27 +94,166 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   };
 
   const publishPoem = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
     if (!user) {
-      navigation.navigate('Auth');
+      Alert.alert('Error', 'You must be logged in to publish a poem');
       return;
     }
 
-    const { error } = await supabase
-      .from('poems')
-      .insert([{ 
-        title: title || 'Untitled', 
-        content, 
-        author_id: user.id 
-      }]);
+    if (!content.trim()) {
+      Alert.alert('Error', 'Please write your poem content before publishing');
+      return;
+    }
 
-    if (!error) {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please give your poem a title before publishing');
+      return;
+    }
+
+    setShowCategoryModal(true);
+  };
+
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    setShowCategoryModal(false);
+
+    try {
+      // Use upsert to ensure the author exists
+      const { error: authorUpsertError } = await supabase
+        .from('authors')
+        .upsert([{
+          id: user.id,
+          name: user.email?.split('@')[0] || 'Unknown User',
+          created_at: new Date().toISOString(),
+        }], {
+          onConflict: 'id',
+          ignoreDuplicates: true
+        });
+
+      if (authorUpsertError) {
+        console.error('Error upserting author:', authorUpsertError);
+        // Continue anyway, the author might already exist
+      }
+
+      // Now create the poem
+      const poemData = {
+        title: title.trim(),
+        content: content.trim(),
+        author_id: user.id,
+        themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
+        form: selectedForm || 'Free Verse',
+        like_count: 0,
+        created_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('poems')
+        .insert([poemData]);
+
+      if (error) throw error;
+
+      // Clear the form
       setTitle('');
       setContent('');
+      setSelectedThemes([]);
+      setSelectedForm('');
+      setWordCount(0);
+      setSyllableCount(0);
+      
+      // Remove draft
       await AsyncStorage.removeItem('draft');
-      navigation.navigate('Read');
+
+      Alert.alert(
+        'Success!', 
+        'Your poem has been published successfully!',
+        [
+          {
+            text: 'View Poems',
+            onPress: () => navigation.navigate('Read')
+          },
+          {
+            text: 'Write Another',
+            style: 'cancel'
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error publishing poem:', error);
+      
+      // More specific error handling
+      if (error.code === '23503') {
+        // Foreign key constraint error - try to create author and retry
+        try {
+          await supabase
+            .from('authors')
+            .insert([{
+              id: user.id,
+              name: user.email?.split('@')[0] || 'Unknown User',
+              created_at: new Date().toISOString(),
+            }]);
+          
+          // Retry poem insertion
+          const poemData = {
+            title: title.trim(),
+            content: content.trim(),
+            author_id: user.id,
+            themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
+            form: selectedForm || 'Free Verse',
+            like_count: 0,
+            created_at: new Date().toISOString(),
+          };
+
+          const { error: retryError } = await supabase
+            .from('poems')
+            .insert([poemData]);
+
+          if (retryError) throw retryError;
+
+          // Success after retry
+          setTitle('');
+          setContent('');
+          setSelectedThemes([]);
+          setSelectedForm('');
+          setWordCount(0);
+          setSyllableCount(0);
+          
+          await AsyncStorage.removeItem('draft');
+
+          Alert.alert(
+            'Success!', 
+            'Your poem has been published successfully!',
+            [
+              {
+                text: 'View Poems',
+                onPress: () => navigation.navigate('Read')
+              },
+              {
+                text: 'Write Another',
+                style: 'cancel'
+              }
+            ]
+          );
+          
+          return; // Exit successfully
+          
+        } catch (retryError) {
+          console.error('Retry failed:', retryError);
+          Alert.alert('Error', 'Failed to create your author profile. Please contact support.');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to publish your poem. Please try again.');
+      }
+    } finally {
+      setIsPublishing(false);
     }
+  };
+
+  const toggleTheme = (theme: string) => {
+    setSelectedThemes(prev => 
+      prev.includes(theme) 
+        ? prev.filter(t => t !== theme)
+        : [...prev, theme]
+    );
   };
 
     const handleAIHelp = () => {
@@ -112,8 +267,14 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       {/* Header with publish button */}
       <View style={styles.header}>
         <Text style={styles.screenTitle}>New Poem</Text>
-        <TouchableOpacity style={styles.publishButton}>
-          <Text style={styles.publishButtonText}>Publish</Text>
+        <TouchableOpacity 
+          style={[styles.publishButton, isPublishing && styles.publishButtonDisabled]} 
+          onPress={publishPoem}
+          disabled={isPublishing}
+        >
+          <Text style={styles.publishButtonText}>
+            {isPublishing ? 'Publishing...' : 'Publish'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -192,6 +353,87 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
           </Text>
         </TouchableOpacity>
       )}
+      
+      {/* Category Selection Modal */}
+      <Modal
+        visible={showCategoryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Categorize Your Poem</Text>
+              
+              {/* Themes Selection */}
+              <Text style={styles.sectionTitle}>Select Themes (up to 3):</Text>
+              <View style={styles.categoriesGrid}>
+                {POEM_CATEGORIES.map((theme) => (
+                  <TouchableOpacity
+                    key={theme}
+                    style={[
+                      styles.categoryChip,
+                      selectedThemes.includes(theme) && styles.categoryChipSelected
+                    ]}
+                    onPress={() => toggleTheme(theme)}
+                    disabled={!selectedThemes.includes(theme) && selectedThemes.length >= 3}
+                  >
+                    <Text style={[
+                      styles.categoryChipText,
+                      selectedThemes.includes(theme) && styles.categoryChipTextSelected
+                    ]}>
+                      {theme}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Form Selection */}
+              <Text style={styles.sectionTitle}>Poem Form:</Text>
+              <View style={styles.categoriesGrid}>
+                {POEM_FORMS.map((form) => (
+                  <TouchableOpacity
+                    key={form}
+                    style={[
+                      styles.categoryChip,
+                      selectedForm === form && styles.categoryChipSelected
+                    ]}
+                    onPress={() => setSelectedForm(form)}
+                  >
+                    <Text style={[
+                      styles.categoryChipText,
+                      selectedForm === form && styles.categoryChipTextSelected
+                    ]}>
+                      {form}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={styles.cancelButton}
+                  onPress={() => setShowCategoryModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.confirmButton, isPublishing && styles.confirmButtonDisabled]}
+                  onPress={handlePublish}
+                  disabled={isPublishing}
+                >
+                  <Text style={styles.confirmButtonText}>
+                    {isPublishing ? 'Publishing...' : 'Publish Poem'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -218,6 +460,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 15,
     borderRadius: 15,
+  },
+  publishButtonDisabled: {
+    backgroundColor: '#bdc3c7',
   },
   publishButtonText: {
     color: 'white',
@@ -309,6 +554,91 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryChip: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginBottom: 8,
+  },
+  categoryChipSelected: {
+    backgroundColor: '#3498db',
+    borderColor: '#3498db',
+  },
+  categoryChipText: {
+    fontSize: 14,
+    color: '#495057',
+  },
+  categoryChipTextSelected: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#e9ecef',
+    padding: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#6c757d',
+    fontWeight: '600',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#00b894',
+    padding: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  confirmButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 

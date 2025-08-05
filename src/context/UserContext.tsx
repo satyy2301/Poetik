@@ -24,7 +24,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (user) {
         const { data: profile } = await supabase
-          .from('profiles')
+          .from('users')
           .select('*')
           .eq('id', user.id)
           .single();

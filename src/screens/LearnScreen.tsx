@@ -8,7 +8,8 @@ import ProgressBar from '../components/ProgressBar';
 import { useUser } from '../context/UserContext';
 
 const LearnScreen = () => {
-   const modules = [
+  const [progress, setProgress] = useState(0);
+  const modules = [
     { 
       title: 'Haiku Mastery', 
       description: '5-7-5 syllable structure',
@@ -28,7 +29,10 @@ const LearnScreen = () => {
       progress: 0/3,
       locked: true
     }
-  ];
+  ];    const { user } = useUser();
+   
+    const [lessons, setLessons] = useState([]);
+    const [dailyChallenge, setDailyChallenge] = useState(null);
   const [activeTab, setActiveTab] = useState('lessons');
   const [aiResponse, setAiResponse] = useState('');
 
@@ -37,10 +41,7 @@ const LearnScreen = () => {
     const { data, error } = await supabase.functions.invoke('analyze-poem', {
       body: { poem: poemText },
     });
-    const { user } = useUser();
-    const [progress, setProgress] = useState(0);
-    const [lessons, setLessons] = useState([]);
-    const [dailyChallenge, setDailyChallenge] = useState(null);
+
     if (error) {
       console.error('Error analyzing poem:', error);
       setAiResponse('Failed to get analysis. Please try again.');

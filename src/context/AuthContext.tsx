@@ -56,6 +56,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       const currentUser = await getCurrentUser();
+      
+      if (currentUser) {
+        // Ensure the user exists in the authors table
+        const { data: existingAuthor, error: authorCheckError } = await supabase
+          .from('authors')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single();
+
+        // If author doesn't exist, create them
+        if (!existingAuthor && authorCheckError?.code === 'PGRST116') {
+          await supabase
+            .from('authors')
+            .insert([{
+              id: currentUser.id,
+              name: currentUser.email?.split('@')[0] || 'Unknown User',
+              created_at: new Date().toISOString(),
+            }]);
+        }
+      }
+      
       setUser(currentUser);
     } finally {
       setIsLoading(false);
