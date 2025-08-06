@@ -1,16 +1,20 @@
 // src/screens/ProfileScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Switch } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { toggleFollow, getUserFollowers, getUserFollowing } from '../features/follow/followService';
 import { getUserFavorites } from '../features/favorites/favoritesService';
 import { getUserPlaylists } from '../features/playlists/playlistService';
 import PoemCard from '../components/PoemCard';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
 const ProfileScreen = ({ route }) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
+  const { theme, isDarkMode, toggleTheme } = useTheme();
+  const colors = theme.colors;
   const navigation = useNavigation();
   const [user, setUser] = useState(route.params?.user || currentUser);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -111,68 +115,149 @@ const ProfileScreen = ({ route }) => {
     setUserPoems(updatedPoems);
 
     await supabase.rpc('increment_likes', { poem_id: poemId });
+    
+    // Add to favorites when liked
+    if (currentUser) {
+      await supabase
+        .from('favorites')
+        .upsert([{
+          user_id: currentUser.id,
+          poem_id: poemId,
+          created_at: new Date().toISOString()
+        }], {
+          onConflict: 'user_id,poem_id'
+        });
+    }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          } 
+        },
+      ]
+    );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.username}>@{user?.email?.split('@')[0] || 'user'}</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.username, { color: colors.text }]}>@{user?.email?.split('@')[0] || 'user'}</Text>
         
-        {user?.id !== currentUser?.id && (
-          <TouchableOpacity
-            style={[styles.followButton, isFollowing && styles.followingButton]}
-            onPress={handleFollowToggle}
-          >
-            <Text style={styles.followButtonText}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.headerActions}>
+          {user?.id !== currentUser?.id ? (
+            <TouchableOpacity
+              style={[styles.followButton, isFollowing && styles.followingButton]}
+              onPress={handleFollowToggle}
+            >
+              <Text style={styles.followButtonText}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerActions}>
+              {/* Theme Toggle */}
+              <View style={[styles.themeToggleContainer, { borderColor: colors.border }]}>
+                <MaterialIcons 
+                  name={isDarkMode ? "light-mode" : "dark-mode"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
+                <Switch
+                  value={isDarkMode}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={isDarkMode ? colors.surface : colors.background}
+                />
+              </View>
+              
+              {/* Logout Button */}
+              <TouchableOpacity
+                style={[styles.logoutButton, { borderColor: colors.error }]}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                <Text style={[styles.logoutButtonText, { color: colors.error }]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
-      <View style={styles.statsContainer}>
+            <View style={[styles.statsContainer, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.statItem}>
-          <Text style={styles.statNumber}>{followersCount}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{followersCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.statItem}>
-          <Text style={styles.statNumber}>{followingCount}</Text>
-          <Text style={styles.statLabel}>Following</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{followingCount}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.statItem}>
-          <Text style={styles.statNumber}>{userPoems.length}</Text>
-          <Text style={styles.statLabel}>Poems</Text>
+          <Text style={[styles.statNumber, { color: colors.text }]}>{userPoems.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Poems</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.statItem}>
-          <Text style={styles.statNumber}>{favorites.poems.length}</Text>
-          <Text style={styles.statLabel}>Favorites</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.tabs}>
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'poems' && styles.activeTab]}
+          style={styles.statItem}
+          onPress={() => navigation.navigate('Playlists')}
+        >
+          <Text style={[styles.statNumber, { color: colors.text }]}>{playlists.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Playlists</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'poems' && { borderBottomColor: colors.primary }]}
           onPress={() => setActiveTab('poems')}
         >
-          <Text style={styles.tabText}>Poems</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'poems' ? colors.primary : colors.textSecondary }]}>
+            Poems
+          </Text>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'playlists' && styles.activeTab]}
-          onPress={() => setActiveTab('playlists')}
-        >
-          <Text style={styles.tabText}>Playlists</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'favorites' && styles.activeTab]}
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'favorites' && { borderBottomColor: colors.primary }]}
           onPress={() => setActiveTab('favorites')}
         >
-          <Text style={styles.tabText}>Favorites</Text>
+          <Text style={[styles.tabText, { color: activeTab === 'favorites' ? colors.primary : colors.textSecondary }]}>
+            Favorites
+          </Text>
         </TouchableOpacity>
+        
+        {user?.id === currentUser?.id && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'playlists' && { borderBottomColor: colors.primary }]}
+            onPress={() => setActiveTab('playlists')}
+          >
+            <Text style={[styles.tabText, { color: activeTab === 'playlists' ? colors.primary : colors.textSecondary }]}>
+              Playlists
+            </Text>
+            <TouchableOpacity 
+              style={styles.playlistsButton}
+              onPress={() => navigation.navigate('Playlists')}
+            >
+              <Ionicons name="add-outline" size={16} color={colors.primary} />
+              <Text style={[styles.playlistsButtonText, { color: colors.primary }]}>Manage</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </View>
 
       {activeTab === 'poems' && (
@@ -242,6 +327,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#ecf0f1',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  themeToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+  },
   username: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -258,6 +357,21 @@ const styles = StyleSheet.create({
   followButtonText: {
     color: 'white',
     fontWeight: '600',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+  },
+  logoutButtonText: {
+    color: '#e74c3c',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -293,6 +407,21 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontWeight: '600',
+  },
+  playlistsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  playlistsButtonText: {
+    fontSize: 12,
+    color: '#3498db',
+    fontWeight: '600',
+    marginLeft: 2,
   },
   playlistItem: {
     padding: 15,

@@ -7,6 +7,8 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import PoemScreen from '../screens/PoemScreen';
+import PlaylistScreen from '../screens/PlaylistScreen';
+import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -24,6 +26,8 @@ const RootNavigator = () => {
           <>
             <Stack.Screen name="App" component={AppNavigator} />
             <Stack.Screen name="PoemDetail" component={PoemScreen} />
+            <Stack.Screen name="Playlists" component={PlaylistScreen} />
+            <Stack.Screen name="AuthorProfile" component={AuthorProfileScreen} />
           </>
         ) : (
           <>

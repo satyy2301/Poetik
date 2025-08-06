@@ -37,6 +37,8 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [selectedForm, setSelectedForm] = useState<string>('');
+  const [selectionStart, setSelectionStart] = useState(0);
+  const [selectionEnd, setSelectionEnd] = useState(0);
   const contentInputRef = useRef<TextInput>(null);
   const countSyllables = (text: string) => {
     // Simple syllable counter (can be enhanced)
@@ -256,6 +258,51 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     );
   };
 
+  const applyFormatting = (format: 'bold' | 'italic') => {
+    if (selectionStart === selectionEnd) {
+      // No text selected, just insert the formatting markers
+      const beforeText = content.substring(0, selectionStart);
+      const afterText = content.substring(selectionStart);
+      const marker = format === 'bold' ? '**' : '*';
+      const newText = beforeText + marker + marker + afterText;
+      setContent(newText);
+      
+      // Move cursor between the markers
+      setTimeout(() => {
+        if (contentInputRef.current) {
+          contentInputRef.current.setSelection(
+            selectionStart + marker.length,
+            selectionStart + marker.length
+          );
+        }
+      }, 10);
+    } else {
+      // Text is selected, wrap it with formatting
+      const beforeText = content.substring(0, selectionStart);
+      const selectedText = content.substring(selectionStart, selectionEnd);
+      const afterText = content.substring(selectionEnd);
+      
+      const marker = format === 'bold' ? '**' : '*';
+      const newText = beforeText + marker + selectedText + marker + afterText;
+      setContent(newText);
+      
+      // Keep selection after formatting
+      setTimeout(() => {
+        if (contentInputRef.current) {
+          contentInputRef.current.setSelection(
+            selectionStart + marker.length,
+            selectionEnd + marker.length
+          );
+        }
+      }, 10);
+    }
+  };
+
+  const handleContentSelectionChange = (event: any) => {
+    setSelectionStart(event.nativeEvent.selection.start);
+    setSelectionEnd(event.nativeEvent.selection.end);
+  };
+
     const handleAIHelp = () => {
     Keyboard.dismiss();
     // Would integrate with Hugging Face API here
@@ -296,17 +343,24 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
         multiline
         value={content}
         onChangeText={handleContentChange}
+        onSelectionChange={handleContentSelectionChange}
         scrollEnabled={!aiSuggestions.length}
       />
 
       {/* Stats bar */}
       <View style={styles.statsBar}>
         <View style={styles.formatButtons}>
-          <TouchableOpacity style={styles.formatButton}>
+          <TouchableOpacity 
+            style={styles.formatButton}
+            onPress={() => applyFormatting('bold')}
+          >
             <Text style={styles.formatButtonText}>B</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.formatButton}>
-            <Text style={styles.formatButtonText}>I</Text>
+          <TouchableOpacity 
+            style={styles.formatButton}
+            onPress={() => applyFormatting('italic')}
+          >
+            <Text style={[styles.formatButtonText, styles.italicText]}>I</Text>
           </TouchableOpacity>
         </View>
         
@@ -503,6 +557,9 @@ const styles = StyleSheet.create({
   formatButtonText: {
     fontWeight: 'bold',
     color: '#2c3e50',
+  },
+  italicText: {
+    fontStyle: 'italic',
   },
   statText: {
     color: '#7f8c8d',
