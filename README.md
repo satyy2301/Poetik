@@ -1,6 +1,8 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 Demo Video : https://drive.google.com/file/d/18ZaB6F2tj8MyT_0eN4nZL5EFVREcmtoY/view?usp=sharing
+![Uploading image.png…]()
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
