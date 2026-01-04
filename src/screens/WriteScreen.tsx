@@ -1,5 +1,5 @@
 // src/screens/WriteScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, Button, StyleSheet, Text , TouchableOpacity,Keyboard, Alert, Modal, ScrollView } from 'react-native';
 import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,6 +8,8 @@ import { RootStackParamList } from '../navigation/types'
 import ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
+import { useOpenAI } from '../context/OpenAIContext';
+import createOpenAIClient from '../lib/openai';
 
 // Define the props type for this screen
 type WriteScreenProps = NativeStackScreenProps<RootStackParamList, 'Write'>;
@@ -26,6 +28,7 @@ const POEM_FORMS = [
 
 const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const { user } = useAuth();
+  const { apiKey, setApiKey } = useOpenAI();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
@@ -39,11 +42,46 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const [selectedForm, setSelectedForm] = useState<string>('');
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [localApiKey, setLocalApiKey] = useState('');
   const contentInputRef = useRef<TextInput>(null);
+  const [aiTemplate, setAiTemplate] = useState<'suggest' | 'continue' | 'shorten' | 'tone' >('suggest');
+  const [aiTemperature, setAiTemperature] = useState<number>(0.8);
+  const [aiMaxTokens, setAiMaxTokens] = useState<number>(400);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [previewText, setPreviewText] = useState('');
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+
   const countSyllables = (text: string) => {
     // Simple syllable counter (can be enhanced)
     const words = text.trim().split(/\s+/);
     return words.reduce((count, word) => count + Math.max(1, word.length / 3), 0);
+  };
+
+  // Load last-used AI settings
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('AI_SETTINGS');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setAiTemplate(parsed.template || 'suggest');
+          setAiTemperature(parsed.temperature ?? 0.8);
+          setAiMaxTokens(parsed.maxTokens ?? 400);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const persistAISettings = async () => {
+    try {
+      await AsyncStorage.setItem('AI_SETTINGS', JSON.stringify({ template: aiTemplate, temperature: aiTemperature, maxTokens: aiMaxTokens }));
+    } catch (e) {
+      // ignore
+    }
   };
 
   const handleContentChange = (text: string) => {
@@ -56,30 +94,64 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const estimateSyllables = (text: string) => {
     return Math.floor(text.length / 3); // Rough approximation
   };
-
+ 
   // Get AI suggestions for the current poem
-  const getAiSuggestions = async () => {
-    if (!content.trim()) {
-      alert('Please write something first!');
+  const requestAISuggestionsDirect = async () => {
+    if (!apiKey) {
+      setShowApiKeyModal(true);
       return;
     }
 
-    Keyboard.dismiss();
+    setAiError(null);
     setIsAiLoading(true);
-    
     try {
-      const { data } = await supabase.functions.invoke('poem-suggestions', {
-        body: {
-          title,
-          content,
-          userId: user?.id
-        }
+      const client = createOpenAIClient(apiKey);
+
+      // Build prompt variants based on template
+      let prompt = '';
+      switch (aiTemplate) {
+        case 'continue':
+          prompt = `Continue and finish this poem in its current tone and style. Return a single poem text.\n\nTitle: ${title}\nContent: ${content}`;
+          break;
+        case 'shorten':
+          prompt = `Shorten the following poem while preserving meaning. Provide up to 3 alternate concise versions in a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
+          break;
+        case 'tone':
+          prompt = `Rewrite the poem in a different tone (give 3 variants) — options: solemn, joyful, ironic. Return a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
+          break;
+        case 'suggest':
+        default:
+          prompt = `Suggest up to 5 concise alternate versions or improvements for the following poem content. Return as a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
+      }
+
+      const response = await client.responses.create({
+        model: 'gpt-4o-mini',
+        input: prompt,
+        max_tokens: Math.min(2000, aiMaxTokens),
+        temperature: Math.max(0, Math.min(1, aiTemperature)),
       });
 
-      setAiSuggestions(data.suggestions);
-    } catch (error) {
-      console.error('AI suggestion error:', error);
-      alert('Failed to get suggestions. Please try again.');
+      const text = response.output_text || (response.output?.[0]?.content?.[0]?.text) || '';
+      let suggestions: string[] = [];
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) suggestions = parsed.map(String).slice(0, 10);
+      } catch (err) {
+        // Fallback: split by blank lines or newlines
+        suggestions = text.split(/\n\n|\n/).map(s => s.trim()).filter(Boolean).slice(0, 10);
+      }
+
+      setAiSuggestions(suggestions);
+      await persistAISettings();
+    } catch (err: any) {
+      console.error('OpenAI request failed', err);
+      if (err?.status === 429 || (err?.message && err.message.toLowerCase().includes('rate')) ) {
+        setAiError('Rate limit reached — try again in a moment.');
+      } else if (err?.message && err.message.toLowerCase().includes('permission')) {
+        setAiError('API key invalid or lacks permission. Please update your key.');
+      } else {
+        setAiError('AI request failed. Check API key and network.');
+      }
     } finally {
       setIsAiLoading(false);
     }
@@ -87,12 +159,28 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 
   // Apply a suggestion to the poem
   const applySuggestion = (suggestion: string) => {
+    // push current content to undo stack
+    setUndoStack(prev => [...prev, content]);
     setContent(suggestion);
     contentInputRef.current?.focus();
     setAiSuggestions([]);
   };
+  const undo = () => {
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setContent(last);
+      return prev.slice(0, prev.length - 1);
+    });
+  };
   const saveDraft = async () => {
     await AsyncStorage.setItem('draft', JSON.stringify({ title, content }));
+  };
+
+  // Preview a suggestion without applying
+  const previewSuggestion = (text: string) => {
+    setPreviewText(text);
+    setPreviewModalVisible(true);
   };
 
   const publishPoem = async () => {
@@ -305,8 +393,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 
     const handleAIHelp = () => {
     Keyboard.dismiss();
-    // Would integrate with Hugging Face API here
-    alert('AI suggestions would appear here');
+    requestAISuggestionsDirect();
   };
 
     return (
@@ -368,45 +455,91 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
         <Text style={styles.statText}>{wordCount} words</Text>
       </View>
 
-      {/* AI Suggestions Section */}
-      {aiSuggestions.length > 0 ? (
-        <View style={styles.suggestionsContainer}>
-          <Text style={styles.suggestionsTitle}>AI Suggestions</Text>
-          {aiSuggestions.map((suggestion, index) => (
-            <TouchableOpacity 
-              key={index}
-              style={styles.suggestionItem}
-              onPress={() => applySuggestion(suggestion)}
-            >
-              <Text style={styles.suggestionText}>{suggestion}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity 
-            style={styles.closeSuggestions}
-            onPress={() => setAiSuggestions([])}
-          >
-            <MaterialIcons name="close" size={24} color="#7f8c8d" />
+      {/* AI Controls */}
+      <View style={styles.aiControlsContainer}>
+        <View style={styles.aiRow}>
+          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'suggest' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('suggest')}>
+            <Text style={styles.aiTemplateText}>Suggest</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'continue' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('continue')}>
+            <Text style={styles.aiTemplateText}>Continue</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'shorten' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('shorten')}>
+            <Text style={styles.aiTemplateText}>Shorten</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'tone' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('tone')}>
+            <Text style={styles.aiTemplateText}>Tone</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <TouchableOpacity 
-          style={styles.aiButton}
-          onPress={getAiSuggestions}
-          disabled={isAiLoading}
-        >
-          <MaterialIcons 
-            name="auto-awesome" 
-            size={20} 
-            color={isAiLoading ? "#bdc3c7" : "#3498db"} 
-          />
-          <Text style={[
-            styles.aiButtonText,
-            isAiLoading && styles.aiButtonTextDisabled
-          ]}>
-            {isAiLoading ? 'Thinking...' : 'AI Assistant'}
-          </Text>
-        </TouchableOpacity>
-      )}
+
+        <View style={styles.aiRow}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.smallLabel}>Temperature (0-1)</Text>
+            <TextInput
+              value={String(aiTemperature)}
+              keyboardType="numeric"
+              onChangeText={(t) => {
+                const v = parseFloat(t) || 0;
+                setAiTemperature(Math.max(0, Math.min(1, v)));
+              }}
+              style={styles.smallInput}
+            />
+          </View>
+
+          <View style={{ width: 120 }}>
+            <Text style={styles.smallLabel}>Max tokens</Text>
+            <TextInput
+              value={String(aiMaxTokens)}
+              keyboardType="numeric"
+              onChangeText={(t) => {
+                const v = Math.max(50, Math.min(2000, parseInt(t || '400')));
+                setAiMaxTokens(v);
+              }}
+              style={styles.smallInput}
+            />
+          </View>
+        </View>
+
+        {aiError ? <Text style={styles.aiError}>{aiError}</Text> : null}
+
+        {aiSuggestions.length > 0 ? (
+          <View style={styles.suggestionsContainer}>
+            <Text style={styles.suggestionsTitle}>AI Suggestions</Text>
+            {aiSuggestions.map((suggestion, index) => (
+              <View key={index} style={styles.suggestionRow}>
+                <TouchableOpacity style={styles.suggestionItem} onPress={() => applySuggestion(suggestion)}>
+                  <Text style={styles.suggestionText} numberOfLines={10}>{suggestion}</Text>
+                </TouchableOpacity>
+                <View style={styles.suggestionActions}>
+                  <TouchableOpacity onPress={() => previewSuggestion(suggestion)} style={styles.previewButton}><Text style={styles.previewText}>Preview</Text></TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            <View style={styles.suggestionFooter}>
+              <TouchableOpacity onPress={() => setAiSuggestions([])} style={styles.cancelButton}><Text style={styles.cancelButtonText}>Close</Text></TouchableOpacity>
+              <TouchableOpacity disabled={undoStack.length === 0} onPress={undo} style={[styles.confirmButton, undoStack.length === 0 && styles.confirmButtonDisabled]}><Text style={styles.confirmButtonText}>Undo</Text></TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.aiButton}
+            onPress={handleAIHelp}
+            disabled={isAiLoading}
+          >
+            <MaterialIcons 
+              name="auto-awesome" 
+              size={20} 
+              color={isAiLoading ? "#bdc3c7" : "#3498db"} 
+            />
+            <Text style={[
+              styles.aiButtonText,
+              isAiLoading && styles.aiButtonTextDisabled
+            ]}>
+              {isAiLoading ? 'Thinking...' : 'AI Assistant'}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
       
       {/* Category Selection Modal */}
       <Modal
@@ -485,6 +618,55 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* API Key Modal */}
+      <Modal
+        visible={showApiKeyModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowApiKeyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>OpenAI API Key</Text>
+            <Text style={{ marginBottom: 10 }}>Enter your OpenAI API key to enable AI features (will be stored locally).</Text>
+            <TextInput
+              placeholder="sk-..."
+              value={localApiKey}
+              onChangeText={setLocalApiKey}
+              style={{ borderWidth: 1, borderColor: '#e9ecef', padding: 10, borderRadius: 8, marginBottom: 10 }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowApiKeyModal(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={async () => { await setApiKey(localApiKey); setShowApiKeyModal(false); }}>
+                <Text style={styles.confirmButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Preview Modal */}
+      <Modal visible={previewModalVisible} animationType="slide" transparent={true} onRequestClose={() => setPreviewModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Preview Suggestion</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              <Text style={{ color: '#34495e', lineHeight: 22 }}>{previewText}</Text>
+            </ScrollView>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setPreviewModalVisible(false)}>
+                <Text style={styles.cancelButtonText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={() => { applySuggestion(previewText); setPreviewModalVisible(false); }}>
+                <Text style={styles.confirmButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -697,6 +879,37 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
   },
+  // Added style snippets for AI controls
+  aiControlsContainer: {
+    marginTop: 10,
+  },
+  aiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  aiTemplateButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#ecf0f1',
+    marginRight: 8,
+  },
+  aiTemplateSelected: {
+    backgroundColor: '#3498db',
+  },
+  aiTemplateText: {
+    color: '#2c3e50',
+    fontWeight: '600',
+  },
+  smallLabel: { fontSize: 12, color: '#636e72', marginBottom: 4 },
+  smallInput: { borderWidth: 1, borderColor: '#e9ecef', padding: 8, borderRadius: 8, backgroundColor: 'white' },
+  aiError: { color: '#e74c3c', marginBottom: 8 },
+  suggestionRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+  suggestionActions: { marginLeft: 8 },
+  previewButton: { padding: 8 },
+  previewText: { color: '#0984e3', fontWeight: '600' },
+  suggestionFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
 });
 
 export default WriteScreen;

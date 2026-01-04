@@ -11,6 +11,7 @@ import WriteScreen from '../screens/WriteScreen';
 import LearnScreen from '../screens/LearnScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
+import MessagesScreen from '../screens/MessagesScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -54,6 +55,8 @@ const MainTabNavigator = () => {
             iconName = 'create-outline';
           } else if (route.name === 'Learn') {
             iconName = 'school-outline';
+          } else if (route.name === 'Messages') {
+            iconName = 'chatbubbles-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -78,6 +81,7 @@ const MainTabNavigator = () => {
     >
       <Tab.Screen name="Read" component={ReadScreenWithTabs} />
       <Tab.Screen name="Write" component={WriteScreen} />
+      <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Learn" component={LearnScreen} />
     </Tab.Navigator>
   );

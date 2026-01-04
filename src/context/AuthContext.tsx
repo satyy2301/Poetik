@@ -18,17 +18,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Initial check
     checkUser();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkUser();
+
+    // Subscribe to auth state changes
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      // session may be null after sign out
+      setUser(session?.user ?? null);
+      setIsLoading(false);
     });
 
     return () => {
-      subscription.unsubscribe();
-      // Clean up any other subscriptions when component unmounts
-      const channel = supabase.channel('user_followers');
-      supabase.removeChannel(channel);
+      // unsubscribe
+      try {
+        subscription?.unsubscribe();
+      } catch (e) {
+        // ignore
+      }
     };
   }, []);
 
@@ -36,7 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!user) return;
 
     const followersChannel = supabase
-      .channel('user_followers')
+      .channel(`user_followers:${user.id}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -48,7 +54,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(followersChannel);
+      try { supabase.removeChannel(followersChannel); } catch (e) { }
     };
   }, [user]);
 
@@ -56,17 +62,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(true);
     try {
       const currentUser = await getCurrentUser();
-      
+
       if (currentUser) {
-        // Ensure the user exists in the authors table
-        const { data: existingAuthor, error: authorCheckError } = await supabase
+        // Ensure the user exists in the users table
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (!existingUser) {
+          await supabase
+            .from('users')
+            .insert([{ id: currentUser.id, username: currentUser.email?.split('@')[0] || 'user', created_at: new Date().toISOString() }]);
+        }
+
+        // Ensure the user exists in the authors table (if your app uses authors)
+        const { data: existingAuthor } = await supabase
           .from('authors')
           .select('id')
           .eq('id', currentUser.id)
           .single();
 
-        // If author doesn't exist, create them
-        if (!existingAuthor && authorCheckError?.code === 'PGRST116') {
+        if (!existingAuthor) {
           await supabase
             .from('authors')
             .insert([{
@@ -76,24 +94,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }]);
         }
       }
-      
+
       setUser(currentUser);
+    } catch (err) {
+      console.warn('checkUser failed', err);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const login = async (email: string, password: string) => {
-    await signIn(email, password);
+    setIsLoading(true);
+    try {
+      await signIn(email, password);
+      await checkUser();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const register = async (email: string, password: string, username: string) => {
-    await signUp(email, password, username);
+    setIsLoading(true);
+    try {
+      await signUp(email, password, username);
+      await checkUser();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async () => {
-    await signOut();
-    setUser(null);
+    setIsLoading(true);
+    try {
+      await signOut();
+      setUser(null);
+    } catch (err) {
+      console.warn('logout failed', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

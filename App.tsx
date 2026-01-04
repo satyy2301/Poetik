@@ -3,9 +3,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { UserProvider } from './src/context/UserContext';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { OpenAIProvider } from './src/context/OpenAIContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
+import { ProgressProvider } from './src/context/ProgressContext';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -26,12 +28,16 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <UserProvider>
-            <StatusBar style="auto" />
-            <RootNavigator />
-          </UserProvider>
-        </AuthProvider>
+        <OpenAIProvider>
+          <AuthProvider>
+            <UserProvider>
+              <ProgressProvider>
+                <StatusBar style="auto" />
+                <RootNavigator />
+              </ProgressProvider>
+            </UserProvider>
+          </AuthProvider>
+        </OpenAIProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

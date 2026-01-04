@@ -5,7 +5,6 @@ export type RootStackParamList = {
   Read: undefined;
   Learn: undefined;
   Auth: undefined;
-  Community: undefined;
   Search: undefined;
   Profile: { user?: any };
   AuthorProfile: { author: any };

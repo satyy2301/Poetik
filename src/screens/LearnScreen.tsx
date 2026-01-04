@@ -1,359 +1,191 @@
 // src/screens/LearnScreen.tsx
 import React, { useState ,useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView ,TextInput} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView ,TextInput, Alert, ActivityIndicator, FlatList } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { LinearGradient } from 'expo-linear-gradient';
 import LessonCard from '../components/LessonCard';
 import ProgressBar from '../components/ProgressBar';
 import { useUser } from '../context/UserContext';
+import { useOpenAI } from '../context/OpenAIContext';
+import createOpenAIClient from '../lib/openai';
 
-const LearnScreen = () => {
+const SAMPLE_COURSES = [
+  { id: 'c1', title: 'Poetry 101: The Absolute Basics', description: 'Form vs free verse, stanza, meter', difficulty: 1, xpReward: 25, steps: [], lesson_order: 1 },
+  { id: 'c2', title: 'Rhyme Time: Mastering Sound Patterns', description: 'Perfect vs slant rhyme, internal rhyme', difficulty: 2, xpReward: 30, steps: [], lesson_order: 2 },
+  { id: 'c3', title: 'Imagery & Sensory Language', description: 'Using five senses in poetry', difficulty: 2, xpReward: 35, steps: [], lesson_order: 3 },
+  { id: 'c4', title: 'Sonnet Mastery: 14 Lines to Perfection', description: 'Iambic pentameter, volta, examples', difficulty: 4, xpReward: 60, steps: [], lesson_order: 4 },
+  { id: 'c5', title: 'Haiku: Less is More', description: '5-7-5 structure and kigo', difficulty: 1, xpReward: 30, steps: [], lesson_order: 5 },
+  { id: 'c6', title: 'Metaphor Magic: Beyond Like and As', description: 'Extended metaphors and conceits', difficulty: 4, xpReward: 55, steps: [], lesson_order: 6 },
+];
+
+const LearnScreen = ({ navigation }: any) => {
   const [progress, setProgress] = useState(0);
-  const modules = [
-    { 
-      title: 'Haiku Mastery', 
-      description: '5-7-5 syllable structure',
-      progress: 3/3,
-      locked: false,
-      achievement: 'Haiku Master'
-    },
-    {
-      title: 'Shakespearean Sonnets',
-      description: '14 lines of structured verse',
-      progress: 1/4,
-      locked: false
-    },
-    {
-      title: 'Free Verse Freedom',
-      description: 'Breaking traditional rules',
-      progress: 0/3,
-      locked: true
-    }
-  ];    const { user } = useUser();
-   
-    const [lessons, setLessons] = useState([]);
-    const [dailyChallenge, setDailyChallenge] = useState(null);
-  const [activeTab, setActiveTab] = useState('lessons');
-  const [aiResponse, setAiResponse] = useState('');
+  const { user } = useUser();
+  const [lessons, setLessons] = useState<any[]>(SAMPLE_COURSES);
+  const [dailyChallenge, setDailyChallenge] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('courses');
+  const { apiKey } = useOpenAI();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
-  const analyzePoem = async (poemText: string) => {
-    // Call Supabase Edge Function which calls Hugging Face
-    const { data, error } = await supabase.functions.invoke('analyze-poem', {
-      body: { poem: poemText },
-    });
-
-    if (error) {
-      console.error('Error analyzing poem:', error);
-      setAiResponse('Failed to get analysis. Please try again.');
-    } else {
-      setAiResponse(data.feedback);
-    }
-  };
   useEffect(() => {
     fetchLearningData();
   }, []);
 
-   const fetchLearningData = async () => {
-    // Fetch user progress
-    const { data: progressData } = await supabase
-      .from('user_progress')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-      
-    setProgress(progressData?.progress || 0);
-    
-    // Fetch lessons
-    const { data: lessonsData } = await supabase
-      .from('lessons')
-      .select('*')
-      .order('order');
-      
-    setLessons(lessonsData || []);
-    
-    // Fetch daily challenge
-    const { data: challengeData } = await supabase
-      .from('daily_challenges')
-      .select('*')
-      .eq('date', new Date().toISOString().split('T')[0])
-      .single();
-      
-    setDailyChallenge(challengeData);
+  const fetchLearningData = async () => {
+    // Fetch from Supabase for lessons and daily challenge
+    try {
+      const { data: lessonsData } = await supabase.from('lessons').select('*').order('lesson_order');
+      if (lessonsData && lessonsData.length) {
+        setLessons(lessonsData);
+      }
+
+      const { data: challenge } = await supabase.from('daily_challenges').select('*').order('date', { ascending: false }).limit(1).single();
+      setDailyChallenge(challenge || null);
+
+      const { data: progressData } = await supabase.from('user_progress').select('*').eq('user_id', user?.id).single();
+      setProgress(progressData?.progress || 0);
+    } catch (err) {
+      console.warn('fetchLearningData err', err);
+    }
   };
 
-  const startLesson = (lesson) => {
+  const openLesson = (lesson: any) => {
     navigation.navigate('LessonDetail', { lessonId: lesson.id });
   };
 
-  const startChallenge = () => {
-    navigation.navigate('ChallengeDetail', { challenge: dailyChallenge });
+  const renderCourse = ({ item }: { item: any }) => (
+    <LessonCard lesson={item} onPress={() => openLesson(item)} />
+  );
+
+  const seedLessons = async () => {
+    try {
+      const seedSql = `-- Minimal seed: insert a course if none exists\nINSERT INTO public.lessons (title, description, type, difficulty, steps, xp_reward, lesson_order)\nSELECT 'Seed Course: Poetry 101', 'Seeded course', 'curated', 1, '[{"type":"theory","content":"Intro"}]', 10, 999\nWHERE NOT EXISTS (SELECT 1 FROM public.lessons WHERE title = 'Seed Course: Poetry 101');`;
+      const { data, error } = await supabase.rpc('sql', { q: seedSql });
+      if (error) throw error;
+      Alert.alert('Seeded', 'Seeded basic lessons (run full seed via SQL editor for more).');
+      fetchLearningData();
+    } catch (err) {
+      console.error('Seed failed', err);
+      Alert.alert('Seed failed', 'Check console for details');
+    }
   };
 
   return (
-    <LinearGradient colors={['#f5f7fa', '#c3cfe2']} style={styles.container}>
-      <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
+    <LinearGradient colors={["#f5f7fa", "#e6eef8"]} style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.xpCard}>
+          <Text style={styles.xpLabel}>XP</Text>
+          <Text style={styles.xpValue}>{Math.round(progress * 1000)}</Text>
+          <Text style={styles.xpSub}>Level {Math.floor((progress * 1000) / 100) || 1}</Text>
+        </View>
+
+        <View style={styles.progressContainerHeader}>
           <Text style={styles.title}>Poetry Academy</Text>
           <Text style={styles.subtitle}>Master the art of verse with AI guidance</Text>
-          
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>Your Learning Progress</Text>
-            <ProgressBar progress={progress} />
-            <Text style={styles.progressPercent}>{Math.round(progress * 100)}%</Text>
-          </View>
         </View>
 
-        {dailyChallenge && (
-          <TouchableOpacity style={styles.challengeCard} onPress={startChallenge}>
-            <Text style={styles.challengeTitle}>Daily Challenge</Text>
-            <Text style={styles.challengeTask}>{dailyChallenge.task}</Text>
-            <Text style={styles.challengeReward}>+{dailyChallenge.xp_reward} XP</Text>
-          </TouchableOpacity>
-        )}
-
-        <Text style={styles.sectionTitle}>Learning Modules</Text>
-        
-        {lessons.map((lesson) => (
-          <LessonCard
-            key={lesson.id}
-            lesson={lesson}
-            onPress={() => startLesson(lesson)}
-          />
-        ))}
-      </ScrollView>
-    </View>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Poetry Academy</Text>
-        <Text style={styles.headerSubtitle}>Master the art of verse with AI guidance</Text>
-        
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>Your Progress: 70%</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, {width: '70%'}]} />
-          </View>
-          <Text style={styles.progressDetail}>7/10 lessons completed this week</Text>
-        </View>
-      </View>
-
-      <View style={styles.dailyChallenge}>
-        <Text style={styles.challengeTitle}>Daily Challenge</Text>
-        <Text style={styles.challengeTask}>Write a haiku about your morning coffee</Text>
-        <TouchableOpacity style={styles.challengeButton}>
-          <Text style={styles.challengeButtonText}>+50 XP • Start Challenge</Text>
+        <TouchableOpacity style={styles.tutorButton} onPress={() => navigation.navigate('Profile')}>
+          <Text style={styles.tutorText}>AI Tutor</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.modulesContainer}>
-        {modules.map((module, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={[
-              styles.moduleCard,
-              module.locked && styles.lockedCard
-            ]}
-            disabled={module.locked}
-          >
-            <View style={styles.moduleHeader}>
-              <Text style={styles.moduleTitle}>{module.title}</Text>
-              {module.achievement && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{module.achievement}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.moduleDescription}>{module.description}</Text>
-            
-            {module.locked ? (
-              <Text style={styles.lockedText}>Complete Sonnets to unlock</Text>
-            ) : (
-              <View style={styles.progressRow}>
-                <Text style={styles.progressText}>
-                  {module.progress === 1 ? 'Completed' : 'In Progress'}
-                </Text>
-                <Text style={styles.lessonCount}>
-                  {Math.floor(module.progress * 3)}/3 lessons
-                </Text>
+      <View style={styles.tabsRow}>
+        <TouchableOpacity style={[styles.tab, activeTab === 'courses' && styles.activeTab]} onPress={() => setActiveTab('courses')}>
+          <Text style={[styles.tabText, activeTab === 'courses' && styles.activeTabText]}>Courses</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'challenges' && styles.activeTab]} onPress={() => setActiveTab('challenges')}>
+          <Text style={[styles.tabText, activeTab === 'challenges' && styles.activeTabText]}>Daily</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'progress' && styles.activeTab]} onPress={() => setActiveTab('progress')}>
+          <Text style={[styles.tabText, activeTab === 'progress' && styles.activeTabText]}>Progress</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, activeTab === 'quiz' && styles.activeTab]} onPress={() => setActiveTab('quiz')}>
+          <Text style={[styles.tabText, activeTab === 'quiz' && styles.activeTabText]}>Quiz</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {activeTab === 'courses' && (
+          <View>
+            <Text style={styles.sectionTitle}>Featured Courses</Text>
+            <FlatList data={lessons} renderItem={renderCourse} keyExtractor={(i:any)=>i.id} />
+            <TouchableOpacity style={[styles.startButton, { backgroundColor: '#6c5ce7' }]} onPress={seedLessons}>
+              <Text style={styles.startText}>Seed Lessons</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {activeTab === 'challenges' && (
+          <View>
+            <Text style={styles.sectionTitle}>Today's Challenge</Text>
+            {dailyChallenge ? (
+              <View style={styles.challengeCard}>
+                <Text style={styles.challengeTitle}>{dailyChallenge.task}</Text>
+                <Text style={styles.challengeXP}>+{dailyChallenge.xp_reward} XP</Text>
+                <TouchableOpacity style={styles.startButton} onPress={() => navigation.navigate('ChallengeDetail', { challenge: dailyChallenge })}>
+                  <Text style={styles.startText}>Start Challenge</Text>
+                </TouchableOpacity>
               </View>
+            ) : (
+              <Text>No challenge for today.</Text>
             )}
-          </TouchableOpacity>
-        ))}
+          </View>
+        )}
+
+        {activeTab === 'progress' && (
+          <View>
+            <Text style={styles.sectionTitle}>Your Progress</Text>
+            <View style={styles.progressCard}>
+              <Text style={styles.progressLarge}>{Math.round(progress * 100)}%</Text>
+              <Text style={styles.progressSmall}>Overall Completion</Text>
+              <View style={{ marginTop: 10 }}>
+                <ProgressBar progress={progress} />
+              </View>
+            </View>
+          </View>
+        )}
+
+        {activeTab === 'quiz' && (
+          <View>
+            <Text style={styles.sectionTitle}>Quizzes</Text>
+            <TouchableOpacity style={[styles.startButton, { backgroundColor: '#6c5ce7' }]} onPress={() => navigation.navigate('QuizList')}>
+              <Text style={styles.startText}>Take a Quiz</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#f8f9fa',
-  },
-    scrollContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2d3436',
-    marginBottom: 5,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#636e72',
-    marginBottom: 15,
-  },
-  progressContainer: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  progressText: {
-    fontWeight: '600',
-    color: '#2d3436',
-    marginBottom: 10,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#dfe6e9',
-    borderRadius: 4,
-    marginVertical: 10,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#00b894',
-    borderRadius: 4,
-  },
-  progressDetail: {
-    fontSize: 12,
-    color: '#636e72',
-  },
-  progressPercent: {
-    textAlign: 'right',
-    color: '#2ecc71',
-    fontWeight: 'bold',
-    marginTop: 5,
-  },
-  dailyChallenge: {
-    backgroundColor: '#0984e3',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-   challengeCard: {
-    backgroundColor: '#3498db',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
-  },
-  challengeTitle: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 18,
-    marginBottom: 5,
-  },
-  challengeTask: {
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 10,
-  },
-  challengeButton: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    alignSelf: 'flex-start',
-  },
-  challengeButtonText: {
-    color: '#0984e3',
-    fontWeight: '600',
-  },
-    challengeReward: {
-    color: '#f1c40f',
-    fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 15,
-  },
-  modulesContainer: {
-    flex: 1,
-  },
-  moduleCard: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  lockedCard: {
-    opacity: 0.6,
-  },
-  moduleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  moduleTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2d3436',
-  },
-  badge: {
-    backgroundColor: '#fdcb6e',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#2d3436',
-  },
-  moduleDescription: {
-    color: '#636e72',
-    marginBottom: 10,
-  },
-  lockedText: {
-    color: '#e17055',
-    fontStyle: 'italic',
-  },
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  lessonCount: {
-    color: '#636e72',
-    fontSize: 12,
-  },
+  container: { flex: 1 },
+  header: { padding: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  xpCard: { backgroundColor: 'white', padding: 12, borderRadius: 12, alignItems: 'center', width: 100, shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  xpLabel: { fontSize: 12, color: '#636e72' },
+  xpValue: { fontSize: 20, fontWeight: 'bold' },
+  xpSub: { fontSize: 12, color: '#636e72' },
+  progressContainerHeader: { flex: 1, marginLeft: 12 },
+  title: { fontSize: 20, fontWeight: 'bold' },
+  subtitle: { color: '#636e72' },
+  tutorButton: { backgroundColor: '#0984e3', padding: 10, borderRadius: 12 },
+  tutorText: { color: 'white', fontWeight: '600' },
+  tabsRow: { flexDirection: 'row', paddingHorizontal: 18, marginTop: 8 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  activeTab: { borderBottomWidth: 2, borderBottomColor: '#0984e3' },
+  tabText: { color: '#636e72' },
+  activeTabText: { color: '#0984e3', fontWeight: '700' },
+  content: { padding: 18, paddingBottom: 40 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  challengeCard: { backgroundColor: 'white', padding: 15, borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.06, elevation: 2 },
+  challengeTitle: { fontSize: 16, fontWeight: 'bold' },
+  challengeXP: { color: '#f1c40f', marginTop: 8 },
+  startButton: { marginTop: 10, backgroundColor: '#00b894', padding: 12, borderRadius: 10, alignItems: 'center' },
+  startText: { color: 'white', fontWeight: '700' },
+  progressCard: { backgroundColor: 'white', padding: 15, borderRadius: 10, alignItems: 'center' },
+  progressLarge: { fontSize: 32, fontWeight: 'bold' },
+  progressSmall: { color: '#636e72' },
 });
 
 export default LearnScreen;
