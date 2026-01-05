@@ -2,11 +2,7 @@
 
 **Poetik** is a full-stack creative studio where users learn, write, and share poetry through AI-guided education, interactive writing tools, and a vibrant community. Built for aspiring poets, writers, and educators to explore the art of verse in a modern, engaging digital environment.
 
-<div align="center">
-
-![Poetik Demo Video](https://github.com/user-attachments/assets/89c0503c-4d30-4f1c-b148-f8b59cb30d54)
-
-</div>
+https://github.com/user-attachments/assets/89c0503c-4d30-4f1c-b148-f8b59cb30d54
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.72+-blue.svg)](https://reactnative.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://typescriptlang.org)
@@ -19,38 +15,23 @@
 ## 📱 App Preview
 
 ### 🏠 Home & Learning Hub
-<img src="screenshots/home-dashboard.png" width="800" alt="Poetik Home Dashboard">
 *Personalized dashboard with daily challenges, progress tracking, and AI course recommendations*
 
 ### ✍️ AI-Powered Writing Studio
-<div align="center">
-  <img src="screenshots/write-screen-1.png" width="250">
-  <img src="screenshots/write-screen-2.png" width="250">
-  <img src="screenshots/write-screen-3.png" width="250">
-</div>
 *Interactive writing interface with AI suggestions, rhyme assistance, and style guidance*
 
 ### 📚 Learn with AI Courses
-<img src="screenshots/learn-screen.png" width="800" alt="AI Learning Courses">
 *Structured poetry courses with interactive lessons, quizzes, and progress tracking*
 
 ### 👥 Community & Sharing
-<div align="center">
-  <img src="screenshots/community-feed.png" width="400">
-  <img src="screenshots/poem-detail.png" width="400">
-</div>
+
 *Share creations, give feedback, and connect with fellow poets*
 
 ### 📊 Progress Tracking
-<img src="screenshots/progress-dashboard.png" width="800" alt="Progress Analytics">
 *Visual analytics showing skill development, XP growth, and achievement milestones*
 
 ### 🎮 Gamified Learning
-<div align="center">
-  <img src="screenshots/daily-challenge.png" width="300">
-  <img src="screenshots/achievements.png" width="300">
-  <img src="screenshots/leaderboard.png" width="300">
-</div>
+
 *Daily challenges, unlockable badges, and community leaderboards*
 
 ---
@@ -340,13 +321,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 🔄 Share with fellow poets and writers
 
 ---
-
-<div align="center">
-  <h3>🎭 Start your poetic journey today</h3>
-  <p>Download Poetik from the App Store or Google Play</p>
-  <img src="screenshots/app-store-badge.png" width="150">
-  <img src="screenshots/play-store-badge.png" width="150">
-</div>
 
 ---
 
