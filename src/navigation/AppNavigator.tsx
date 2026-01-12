@@ -12,6 +12,10 @@ import LearnScreen from '../screens/LearnScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import MessagesScreen from '../screens/MessagesScreen';
+import LessonDetailScreen from '../screens/LessonsDetailScreen';
+import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
+import QuizListScreen from '../screens/QuizListScreen';
+import AITutorScreen from '../screens/AITutorScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -112,6 +116,10 @@ const AppNavigator = () => {
       />
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="LessonDetail" component={LessonDetailScreen} />
+      <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
+      <Stack.Screen name="QuizList" component={QuizListScreen} />
+      <Stack.Screen name="AITutor" component={AITutorScreen} />
     </Stack.Navigator>
   );
 };

@@ -357,11 +357,19 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       
       // Move cursor between the markers
       setTimeout(() => {
-        if (contentInputRef.current) {
-          contentInputRef.current.setSelection(
-            selectionStart + marker.length,
-            selectionStart + marker.length
-          );
+        try {
+          if (contentInputRef.current && typeof (contentInputRef.current as any).setSelection === 'function') {
+            (contentInputRef.current as any).setSelection(
+              selectionStart + marker.length,
+              selectionStart + marker.length
+            );
+          } else if (contentInputRef.current && typeof (contentInputRef.current as any).setNativeProps === 'function') {
+            (contentInputRef.current as any).setNativeProps({ selection: { start: selectionStart + marker.length, end: selectionStart + marker.length } });
+          } else if (contentInputRef.current && typeof (contentInputRef.current as any).focus === 'function') {
+            (contentInputRef.current as any).focus();
+          }
+        } catch (e) {
+          console.warn('setSelection guard failed', e);
         }
       }, 10);
     } else {
@@ -376,11 +384,19 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       
       // Keep selection after formatting
       setTimeout(() => {
-        if (contentInputRef.current) {
-          contentInputRef.current.setSelection(
-            selectionStart + marker.length,
-            selectionEnd + marker.length
-          );
+        try {
+          if (contentInputRef.current && typeof (contentInputRef.current as any).setSelection === 'function') {
+            (contentInputRef.current as any).setSelection(
+              selectionStart + marker.length,
+              selectionEnd + marker.length
+            );
+          } else if (contentInputRef.current && typeof (contentInputRef.current as any).setNativeProps === 'function') {
+            (contentInputRef.current as any).setNativeProps({ selection: { start: selectionStart + marker.length, end: selectionEnd + marker.length } });
+          } else if (contentInputRef.current && typeof (contentInputRef.current as any).focus === 'function') {
+            (contentInputRef.current as any).focus();
+          }
+        } catch (e) {
+          console.warn('setSelection guard failed', e);
         }
       }, 10);
     }

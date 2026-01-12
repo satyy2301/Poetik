@@ -2,8 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useUser } from '../context/UserContext';
--import messagingService, { getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages } from '../features/messaging/messagingService';
-+import messagingService, { getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages, setTypingStatus, subscribeToTyping } from '../features/messaging/messagingService';
+import messagingService, { getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages, setTypingStatus, subscribeToTyping } from '../features/messaging/messagingService';
 
 const MessagesScreen = ({ navigation }: any) => {
   const { user } = useUser();

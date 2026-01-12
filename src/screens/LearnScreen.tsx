@@ -60,8 +60,18 @@ const LearnScreen = ({ navigation }: any) => {
 
   const seedLessons = async () => {
     try {
-      const seedSql = `-- Minimal seed: insert a course if none exists\nINSERT INTO public.lessons (title, description, type, difficulty, steps, xp_reward, lesson_order)\nSELECT 'Seed Course: Poetry 101', 'Seeded course', 'curated', 1, '[{"type":"theory","content":"Intro"}]', 10, 999\nWHERE NOT EXISTS (SELECT 1 FROM public.lessons WHERE title = 'Seed Course: Poetry 101');`;
-      const { data, error } = await supabase.rpc('sql', { q: seedSql });
+      // Use client-side insert instead of calling non-existent RPC
+      const sample = {
+        title: 'Seed Course: Poetry 101',
+        description: 'Seeded course',
+        type: 'curated',
+        difficulty: 1,
+        steps: [{ type: 'theory', content: 'Intro' }],
+        xp_reward: 10,
+        lesson_order: 999,
+      };
+
+      const { data, error } = await supabase.from('lessons').insert([sample]).select();
       if (error) throw error;
       Alert.alert('Seeded', 'Seeded basic lessons (run full seed via SQL editor for more).');
       fetchLearningData();
