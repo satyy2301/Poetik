@@ -1,99 +1,327 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🎭 Poetik – AI-Powered Poetry Learning & Creation Platform
 
-Demo Video : https://drive.google.com/file/d/18ZaB6F2tj8MyT_0eN4nZL5EFVREcmtoY/view?usp=sharing
+**Poetik** is a full-stack creative studio where users learn, write, and share poetry through AI-guided education, interactive writing tools, and a vibrant community. Built for aspiring poets, writers, and educators to explore the art of verse in a modern, engaging digital environment.
 
-# Getting Started
+https://github.com/user-attachments/assets/89c0503c-4d30-4f1c-b148-f8b59cb30d54
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+[![React Native](https://img.shields.io/badge/React%20Native-0.72+-blue.svg)](https://reactnative.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E.svg)](https://supabase.com)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT-412991.svg)](https://openai.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 📱 App Preview
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 🏠 Home & Learning Hub
+*Personalized dashboard with daily challenges, progress tracking, and AI course recommendations*
 
-```sh
-# Using npm
-npm start
+### ✍️ AI-Powered Writing Studio
+*Interactive writing interface with AI suggestions, rhyme assistance, and style guidance*
 
-# OR using Yarn
-yarn start
+### 📚 Learn with AI Courses
+*Structured poetry courses with interactive lessons, quizzes, and progress tracking*
+
+### 👥 Community & Sharing
+
+*Share creations, give feedback, and connect with fellow poets*
+
+### 📊 Progress Tracking
+*Visual analytics showing skill development, XP growth, and achievement milestones*
+
+### 🎮 Gamified Learning
+
+*Daily challenges, unlockable badges, and community leaderboards*
+
+---
+
+## ✨ Features
+
+### 🧠 **AI-Powered Education**
+- **Personalized Learning Paths** – AI recommends courses based on your writing style and skill level
+- **Interactive Lessons** – Step-by-step poetry courses with theory, examples, and practice exercises
+- **AI Writing Assistant** – Real-time suggestions for rhyme, meter, imagery, and structure
+- **Smart Feedback** – AI critiques your poems with constructive improvement suggestions
+
+### ✍️ **Creative Writing Studio**
+- **Rich Text Editor** – Format poems with custom line breaks, stanzas, and typography
+- **Rhyme & Meter Tools** – Built-in dictionary, thesaurus, and syllable counter
+- **Style Templates** – Pre-built forms (Sonnet, Haiku, Limerick, Free Verse)
+- **Inspiration Prompts** – AI-generated creative prompts based on mood, theme, or style
+
+### 📚 **Comprehensive Learning System**
+- **Structured Courses** – 30+ courses from beginner to advanced levels
+- **Daily Challenges** – New creative prompts every day with bonus XP rewards
+- **Skill Tracking** – Progress visualization across form, technique, and analysis
+- **Achievement System** – Unlock badges and rewards as you master poetry skills
+
+### 👥 **Community Features**
+- **Shared Workspace** – Publish poems and receive community feedback
+- **Collaborative Writing** – Real-time co-writing sessions with other poets
+- **Discussion Forums** – Topic-based discussions on poetry techniques and themes
+- **Mentorship Program** – Connect with experienced poets for guidance
+
+### 🎮 **Gamification & Engagement**
+- **XP & Leveling** – Earn experience points for all learning activities
+- **7-Day Streaks** – Daily login rewards and consistency tracking
+- **Skill Badges** – Visual representation of mastered poetry techniques
+- **Weekly Leaderboards** – Compete with friends and the community
+
+---
+
+## 🛠️ Tech Stack
+
+### **Frontend**
+- **React Native** – Cross-platform mobile development
+- **TypeScript** – Type-safe development experience
+- **Tailwind CSS** – Utility-first styling with NativeWind
+- **React Navigation** – Seamless screen transitions and routing
+- **Reanimated & Moti** – Smooth animations and gestures
+
+### **Backend & APIs**
+- **Supabase** – PostgreSQL database, authentication, and real-time subscriptions
+- **Node.js/Express** – Custom API endpoints and business logic
+- **OpenAI API** – GPT-4 for AI writing assistance and content generation
+- **Google Cloud** – Translation, text-to-speech, and additional NLP services
+
+### **State & Data**
+- **Zustand** – Lightweight state management
+- **React Query** – Server state synchronization and caching
+- **AsyncStorage** – Local persistence for offline functionality
+- **FastImage** – Optimized image loading and caching
+
+### **Development & Deployment**
+- **Expo** – Development workflow and build pipeline
+- **GitHub Actions** – CI/CD automation
+- **Firebase** – Analytics, crash reporting, and remote config
+- **Vercel** – Web dashboard deployment
+
+---
+
+## 📦 Installation & Setup
+
+### Prerequisites
+- Node.js 18+
+- Expo CLI
+- Supabase account
+- OpenAI API key
+
+### Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/satyy2301/Poetik.git
+cd Poetik
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env
+# Add your API keys to .env
+
+# Start development server
+npx expo start
+
+# For web development
+npx expo start --web
 ```
 
-## Step 2: Build and run your app
+### Database Setup
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```sql
+-- Run in Supabase SQL Editor
+\i supabase/schema/lessons.sql
+\i supabase/schema/seed_lessons.sql
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 🚀 Key Features in Detail
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+### **AI Course Engine**
+```typescript
+// Example: AI-generated poetry course
+const course = await generateCourse({
+  skillLevel: 'intermediate',
+  focusArea: 'metaphor',
+  preferredForms: ['sonnet', 'free-verse'],
+  duration: '30min'
+});
 ```
 
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
+### **Real-time Writing Assistant**
+```typescript
+// AI-powered writing suggestions
+const suggestions = await getWritingSuggestions({
+  text: currentPoem,
+  style: 'romantic',
+  difficulty: 'medium',
+  focus: ['imagery', 'rhyme']
+});
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+### **Progress Tracking System**
+```typescript
+// Track user progress across multiple dimensions
+const progress = calculateProgress({
+  completedLessons,
+  poemsWritten,
+  communityFeedback,
+  dailyStreak
+});
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 📁 Project Structure
 
-## Step 3: Modify your app
+```
+poetik/
+├── src/
+│   ├── screens/                 # App screens
+│   │   ├── LearnScreen/        # AI courses & progress
+│   │   ├── WriteScreen/        # Poetry editor
+│   │   ├── ReadScreen/         # Community feed
+│   │   └── ProfileScreen/      # User profile & stats
+│   ├── components/             # Reusable UI components
+│   ├── context/               # React contexts
+│   │   ├── AuthContext.tsx    # Authentication
+│   │   ├── ProgressContext.tsx # Learning progress
+│   │   └── OpenAIContext.tsx  # AI integration
+│   ├── lib/                   # Utilities & helpers
+│   ├── services/              # API services
+│   └── types/                 # TypeScript definitions
+├── supabase/
+│   ├── schema/                # Database schema
+│   └── migrations/            # Database migrations
+├── assets/                    # Images, fonts, icons
+└── scripts/                   # Build & deployment scripts
+```
 
-Now that you have successfully run the app, let's make changes!
+---
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## 🔧 Development
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### Running the App
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+```bash
+# iOS Simulator
+npx expo start --ios
 
-## Congratulations! :tada:
+# Android Emulator
+npx expo start --android
 
-You've successfully run and modified your React Native App. :partying_face:
+# Web Browser
+npx expo start --web
 
-### Now what?
+# Production build
+eas build --platform ios --profile production
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+### Code Quality
 
-# Troubleshooting
+```bash
+# Type checking
+npx tsc --noEmit
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+# Linting
+npx eslint .
 
-# Learn More
+# Formatting
+npx prettier --write .
+```
 
-To learn more about React Native, take a look at the following resources:
+---
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## 📊 Database Schema
+
+### Core Tables
+```sql
+-- Users & Progress
+users (id, email, username, avatar_url)
+user_progress (user_id, xp, level, streak, completed_lessons[])
+
+-- Learning Content
+lessons (id, title, description, difficulty, steps[], xp_reward)
+user_lessons (user_id, lesson_id, completed, completed_at)
+quizzes (lesson_id, questions[], correct_answers)
+
+-- Poetry & Community
+poems (id, user_id, title, content, form, tags[], visibility)
+poem_feedback (poem_id, user_id, feedback, rating)
+community_posts (user_id, content, type, likes, comments)
+```
+
+---
+
+## 🎯 Roadmap & Future Features
+
+### **Phase 1 (Completed)**
+- [x] Core learning platform with AI courses
+- [x] Basic writing studio with AI assistance
+- [x] User authentication and profiles
+- [x] Community feed and interactions
+
+### **Phase 2 (In Progress)**
+- [ ] Voice-based poetry creation (speech-to-text)
+- [ ] Multi-language poetry translation
+- [ ] Advanced AI critique with style analysis
+- [ ] Collaborative writing rooms
+
+### **Phase 3 (Planned)**
+- [ ] AR poetry visualization
+- [ ] Poetry performance recording studio
+- [ ] Published poetry collections marketplace
+- [ ] Poetry competition and events platform
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **OpenAI** for GPT-4 API and AI capabilities
+- **Supabase** for backend infrastructure
+- **Expo** for cross-platform development framework
+- **React Native Community** for amazing libraries and tools
+- **All our beta testers and early adopters** for valuable feedback
+
+---
+
+## 📬 Connect & Support
+
+**Developed by Satyam Gupta**
+- 🌐 Portfolio: [satyamgupta.dev](https://satyamgupta.dev)
+- 📧 Email: satyamg065@gmail.com
+- 💼 LinkedIn: [linkedin/satyamgupta-dev](https://linkedin.com/in/satyamgupta-dev)
+- 🐦 Twitter: [@satyamg065](https://twitter.com/satyamg065)
+
+**Support the Project**
+- ⭐ Star the repository
+- 🐛 Report bugs and issues
+- 💡 Suggest new features
+- 🔄 Share with fellow poets and writers
+
+---
+
+---
+
+**⭐ If you love poetry and technology, give this project a star on GitHub!**
