@@ -6,7 +6,7 @@
 https://github.com/user-attachments/assets/62c365a6-fee3-4a1e-bc76-b37a8c91ba2c
 
 <img width="285" height="610" alt="image" src="https://github.com/user-attachments/assets/3add6cfd-d359-4de7-ab30-1332973d5067" />
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://typescriptlang.org)
+
 
 
 ---
