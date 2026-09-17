@@ -3,7 +3,12 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const AIFeedback = ({ feedback, scores }) => {
+type AIFeedbackProps = {
+  feedback: string;
+  scores?: Record<string, number>;
+};
+
+const AIFeedback = ({ feedback, scores }: AIFeedbackProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>

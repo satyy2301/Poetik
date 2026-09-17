@@ -55,17 +55,14 @@ export const requestAIWriting = async (opts: AIRequestOptions): Promise<string[]
   const client = createOpenAIClient(opts.apiKey);
   const prompt = buildPrompt(opts);
 
-  const response = await client.responses.create({
+  const response = await client.chat.completions.create({
     model: 'gpt-4o-mini',
-    input: prompt,
+    messages: [{ role: 'user', content: prompt }],
     max_tokens: Math.min(2000, opts.maxTokens ?? 400),
     temperature: Math.max(0, Math.min(1, opts.temperature ?? 0.8)),
   });
 
-  const text =
-    response.output_text ||
-    (response as any).output?.[0]?.content?.[0]?.text ||
-    '';
+  const text = response.choices[0]?.message?.content || '';
 
   if (opts.template === 'grammar') {
     try {
@@ -91,7 +88,7 @@ export const requestAIWriting = async (opts: AIRequestOptions): Promise<string[]
 
   return text
     .split(/\n\n|\n/)
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean)
     .slice(0, 10);
 };

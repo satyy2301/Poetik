@@ -1,3 +1,12 @@
 {
-  "extends": "@react-native/typescript-config"
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "supabase/functions/**/*",
+    "node_modules"
+  ]
 }

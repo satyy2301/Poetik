@@ -1,13 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import PoemCard from '../components/PoemCard';
 import PoemFilter from '../components/PoemFilter';
+import ScreenContainer from '../components/layout/ScreenContainer';
+import EmptyState from '../components/ui/EmptyState';
+import SkeletonPoemCard from '../components/loaders/SkeletonPoemCard';
 import { Poem, PoemFilters, PoemSort } from '../types/poem';
 import { fetchPoems, incrementPoemLikes } from '../services/poemService';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { getFollowingIds } from '../services/followService';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../context/ThemeContext';
+import { hapticLight } from '../utils/haptics';
 
 const PAGE_SIZE = 20;
 
@@ -15,6 +20,7 @@ type ReadScreenProps = { feedMode?: 'all' | 'following' };
 
 const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   const { user } = useUser();
+  const { theme } = useTheme();
   const [poems, setPoems] = useState<Poem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -68,6 +74,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   const handleRefresh = () => {
     setRefreshing(true);
     setHasMore(true);
+    hapticLight();
     loadPage(0, true);
   };
 
@@ -92,7 +99,6 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
           : poem,
       ),
     );
-
     try {
       await incrementPoemLikes(poemId);
     } catch (error) {
@@ -107,13 +113,18 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
         onPress={() => handleViewPoem(item)}
         onAuthorPress={() => handleViewAuthor(item.author as { id: string; name?: string })}
         onLike={() => handleLike(item.id)}
+        onComment={() => handleViewPoem(item)}
       />
     ),
     [navigation],
   );
 
+  const emptyMessage = feedMode === 'following'
+    ? 'Follow poets to see their verses here.'
+    : 'No poems yet. Check back soon.';
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.bgCanvas }]}>
       <PoemFilter
         currentFilters={filters}
         currentSort={sort}
@@ -121,36 +132,42 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
         onSortChange={setSort}
       />
 
-      <FlatList
-        data={poems}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        onRefresh={handleRefresh}
-        refreshing={refreshing}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>No poems yet. Check back soon.</Text>
-            </View>
-          ) : null
-        }
-        ListFooterComponent={
-          loading && !refreshing ? (
-            <ActivityIndicator style={styles.loading} size="large" />
-          ) : null
-        }
-      />
+      <ScreenContainer edges={[]} contentStyle={styles.feedContent}>
+        <FlatList
+          data={poems}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            !loading ? (
+              <EmptyState
+                icon="book-outline"
+                title="No poems yet"
+                description={emptyMessage}
+              />
+            ) : null
+          }
+          ListFooterComponent={
+            loading && !refreshing ? (
+              <View>
+                <SkeletonPoemCard />
+                <SkeletonPoemCard />
+              </View>
+            ) : null
+          }
+        />
+      </ScreenContainer>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  loading: { marginVertical: 20 },
-  empty: { padding: 40, alignItems: 'center' },
-  emptyText: { color: '#7f8c8d', fontSize: 16 },
+  container: { flex: 1 },
+  feedContent: { paddingHorizontal: 0, flex: 1 },
 });
 
 export default ReadScreen;

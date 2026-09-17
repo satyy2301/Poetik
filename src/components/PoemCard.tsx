@@ -1,40 +1,83 @@
 // src/components/PoemCard.tsx
-import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, Modal, FlatList, Alert } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Modal,
+  FlatList,
+  Alert,
+  Animated,
+  Platform,
+  Share,
+} from 'react-native';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
+import { hapticMedium } from '../utils/haptics';
 
-const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
+const formatTimestamp = (dateStr?: string) => {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+};
+
+const PoemCard = ({
+  poem,
+  onPress,
+  onAuthorPress,
+  onLike,
+  onComment,
+}: {
   poem: any;
   onPress: () => void;
   onAuthorPress: () => void;
   onLike: () => void;
+  onComment?: () => void;
 }) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const colors = theme.colors;
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
-  const [playlists, setPlaylists] = useState([]);
+  const [playlists, setPlaylists] = useState<any[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  
-  const previewContent = poem.content.length > 150 
-    ? `${poem.content.substring(0, 150)}...` 
-    : poem.content;
+  const [isSaved, setIsSaved] = useState(false);
+  const heartScale = useRef(new Animated.Value(1)).current;
 
-  const handleAddToPlaylist = async () => {
+  const animateHeart = () => {
+    Animated.sequence([
+      Animated.spring(heartScale, { toValue: 1.35, useNativeDriver: true, damping: 12 }),
+      Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, damping: 12 }),
+    ]).start();
+  };
+
+  const handleLike = (e?: any) => {
+    e?.stopPropagation?.();
+    setIsLiked(!isLiked);
+    animateHeart();
+    hapticMedium();
+    onLike();
+  };
+
+  const handleAddToPlaylist = async (e?: any) => {
+    e?.stopPropagation?.();
     if (!user) {
-      Alert.alert('Login Required', 'Please login to add poems to playlists');
+      Alert.alert('Login Required', 'Please login to save poems to playlists');
       return;
     }
-
     setIsLoadingPlaylists(true);
     try {
       const { data } = await getUserPlaylists(user.id);
-      setPlaylists(data);
+      setPlaylists(data || []);
       setShowPlaylistModal(true);
     } catch (error) {
       console.error('Error loading playlists:', error);
@@ -47,16 +90,15 @@ const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
   const handleSelectPlaylist = async (playlistId: string, playlistTitle: string) => {
     try {
       const { error } = await addPoemToPlaylist(playlistId, poem.id);
-      
       if (error) {
-        if (error.message.includes('already in playlist')) {
+        if ((error as Error).message?.includes('already in playlist')) {
           Alert.alert('Already Added', 'This poem is already in the playlist');
         } else {
           Alert.alert('Error', 'Failed to add poem to playlist');
         }
         return;
       }
-
+      setIsSaved(true);
       Alert.alert('Success', `Added to "${playlistTitle}"`);
       setShowPlaylistModal(false);
     } catch (error) {
@@ -65,127 +107,162 @@ const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
     }
   };
 
-  const renderPlaylistItem = ({ item: playlist }) => (
-    <TouchableOpacity
-      style={styles.playlistItem}
-      onPress={() => handleSelectPlaylist(playlist.id, playlist.title)}
-    >
-      <View style={styles.playlistInfo}>
-        <Text style={styles.playlistTitle}>{playlist.title}</Text>
-        <Text style={styles.playlistCount}>
-          {playlist.playlist_poems?.length || 0} poems
-        </Text>
-      </View>
-      <MaterialIcons name="add" size={24} color="#3498db" />
-    </TouchableOpacity>
-  );
+  const handleShare = async (e?: any) => {
+    e?.stopPropagation?.();
+    try {
+      await Share.share({
+        message: `"${poem.title || 'Untitled'}" by @${poem.author?.name || 'Unknown'}\n\n${poem.content?.slice(0, 200)}`,
+      });
+    } catch (_) {
+      // user cancelled
+    }
+  };
+
+  const authorInitial = (poem.author?.name || 'U')[0].toUpperCase();
+  const tags = [
+    ...(poem.form ? [poem.form] : []),
+    ...(poem.themes?.slice(0, 2) || []),
+  ];
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {/* Gradient Header */}
-        <LinearGradient
-          colors={colors.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientHeader}
-        >
-          <View style={styles.headerContent}>
-            <Text style={[styles.title, { color: 'white' }]} numberOfLines={2}>
-              {poem.title || 'Untitled'}
-            </Text>
-            <TouchableOpacity onPress={onAuthorPress} style={styles.authorBadge}>
-              <Text style={styles.authorBadgeText}>@{poem.author?.name || 'Unknown'}</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.bgSurface,
+            borderColor: colors.borderMuted,
+          },
+          theme.shadows.card,
+        ]}
+      >
+        {/* Author header row */}
+        <View style={[styles.authorRow, { backgroundColor: colors.cardHeaderTint }]}>
+          <TouchableOpacity onPress={onAuthorPress} style={styles.authorInfo}>
+            <View style={[styles.avatar, { backgroundColor: colors.brandPrimary }]}>
+              <Text style={styles.avatarText}>{authorInitial}</Text>
+            </View>
+            <View>
+              <Text style={[styles.handle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+                @{poem.author?.name || 'Unknown'}
+              </Text>
+              <Text style={[styles.timestamp, theme.typography.bodySm, { color: colors.textSecondary }]}>
+                {formatTimestamp(poem.created_at)}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
-        {/* Content */}
-        <View style={styles.contentContainer}>
-          <Text style={[styles.content, { color: colors.text }]} numberOfLines={4}>
-            {previewContent}
+        <View style={styles.body}>
+          <Text
+            style={[theme.typography.poemTitle, { color: colors.textPrimary }]}
+            numberOfLines={2}
+          >
+            {poem.title || 'Untitled'}
           </Text>
-          
-          {/* Themes */}
-          {poem.themes?.length > 0 && (
-            <View style={styles.themesContainer}>
-              {poem.themes.slice(0, 3).map((theme, index) => (
-                <View key={index} style={[styles.themePill, { backgroundColor: `${colors.primary}15` }]}>
-                  <Text style={[styles.themeText, { color: colors.primary }]}>
-                    {theme}
-                  </Text>
+
+          <View style={styles.contentWrapper}>
+            <Text
+              style={[theme.typography.poemBody, { color: colors.textPrimary }]}
+              numberOfLines={4}
+            >
+              {poem.content}
+            </Text>
+            {Platform.OS === 'web' && (
+              <LinearGradient
+                colors={[`${colors.bgSurface}00`, colors.bgSurface]}
+                style={styles.fadeMask}
+                pointerEvents="none"
+              />
+            )}
+          </View>
+
+          {tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {tags.map((tag: string, index: number) => (
+                <View
+                  key={index}
+                  style={[styles.tag, { backgroundColor: colors.cardHeaderTint, borderColor: colors.borderSubtle }]}
+                >
+                  <Text style={[theme.typography.bodySm, { color: colors.brandPrimary }]}>{tag}</Text>
                 </View>
               ))}
-              {poem.themes.length > 3 && (
-                <View style={[styles.themePill, { backgroundColor: colors.border }]}>
-                  <Text style={[styles.themeText, { color: colors.textSecondary }]}>
-                    +{poem.themes.length - 3}
-                  </Text>
-                </View>
-              )}
             </View>
           )}
         </View>
 
-        {/* Footer Actions */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-          <View style={styles.metaInfo}>
-            {poem.form && (
-              <View style={styles.formBadge}>
-                <MaterialIcons name="style" size={14} color={colors.textSecondary} />
-                <Text style={[styles.formText, { color: colors.textSecondary }]}>{poem.form}</Text>
-              </View>
-            )}
-          </View>
-          
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: isLiked ? `${colors.error}15` : 'transparent' }]} 
-              onPress={() => {
-                setIsLiked(!isLiked);
-                onLike();
-              }}
-            >
-              <MaterialIcons 
-                name={isLiked ? "favorite" : "favorite-border"} 
-                size={20} 
-                color={colors.error}
+        <View style={[styles.actionsRow, { borderTopColor: colors.borderMuted }]}>
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={handleLike}
+            activeOpacity={0.7}
+          >
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
+                size={22}
+                color={colors.likeHeart}
               />
-              <Text style={[styles.actionText, { color: colors.error }]}>
-                {poem.like_count || 0}
-              </Text>
-            </TouchableOpacity>
+            </Animated.View>
+            <Text style={[styles.actionCount, { color: colors.textSecondary }]}>
+              {poem.like_count || 0}
+            </Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleAddToPlaylist}
-              disabled={isLoadingPlaylists}
-            >
-              <MaterialIcons 
-                name="playlist-add" 
-                size={20} 
-                color={isLoadingPlaylists ? colors.textSecondary : colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onComment?.() ?? onPress();
+            }}
+          >
+            <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
+            <Text style={[styles.actionCount, { color: colors.textSecondary }]}>
+              {poem.comment_count || 0}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={handleAddToPlaylist}
+            disabled={isLoadingPlaylists}
+          >
+            <Ionicons
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color={isSaved ? colors.bookmarkGold : colors.textSecondary}
+            />
+            <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Save</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionItem} onPress={handleShare}>
+            <Ionicons name="share-social-outline" size={20} color={colors.textSecondary} />
+            <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Modal remains the same but with theme colors */}
         <Modal
           visible={showPlaylistModal}
           animationType="slide"
-          transparent={true}
+          transparent
           onRequestClose={() => setShowPlaylistModal(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Add to Playlist</Text>
-              
+            <View style={[styles.modalContent, { backgroundColor: colors.bgSurface }]}>
+              <Text style={[theme.typography.displaySm, { color: colors.textPrimary, textAlign: 'center', marginBottom: 20 }]}>
+                Add to Playlist
+              </Text>
+
               {playlists.length === 0 ? (
                 <View style={styles.noPlaylistsContainer}>
                   <MaterialIcons name="playlist-add" size={48} color={colors.textSecondary} />
-                  <Text style={[styles.noPlaylistsText, { color: colors.text }]}>No playlists found</Text>
-                  <Text style={[styles.noPlaylistsSubtext, { color: colors.textSecondary }]}>
+                  <Text style={[theme.typography.emptyTitle, { color: colors.textPrimary, marginTop: 15 }]}>
+                    No playlists found
+                  </Text>
+                  <Text style={[theme.typography.emptyDescription, { color: colors.textSecondary, marginTop: 5 }]}>
                     Create a playlist first to organize your poems
                   </Text>
                 </View>
@@ -195,18 +272,18 @@ const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
                   keyExtractor={(item) => item.id}
                   renderItem={({ item: playlist }) => (
                     <TouchableOpacity
-                      style={[styles.playlistItem, { borderBottomColor: colors.border }]}
+                      style={[styles.playlistItem, { borderBottomColor: colors.borderMuted }]}
                       onPress={() => handleSelectPlaylist(playlist.id, playlist.title)}
                     >
                       <View style={styles.playlistInfo}>
-                        <Text style={[styles.playlistTitle, { color: colors.text }]}>
+                        <Text style={[theme.typography.bodyMd, { color: colors.textPrimary, fontFamily: 'Inter-Bold' }]}>
                           {playlist.title}
                         </Text>
-                        <Text style={[styles.playlistCount, { color: colors.textSecondary }]}>
+                        <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
                           {playlist.playlist_poems?.length || 0} poems
                         </Text>
                       </View>
-                      <MaterialIcons name="add" size={24} color={colors.primary} />
+                      <MaterialIcons name="add" size={24} color={colors.brandPrimary} />
                     </TouchableOpacity>
                   )}
                   style={styles.playlistsList}
@@ -214,12 +291,10 @@ const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
               )}
 
               <TouchableOpacity
-                style={[styles.modalCloseButton, { backgroundColor: colors.border }]}
+                style={[styles.modalCloseButton, { backgroundColor: colors.bgElevated }]}
                 onPress={() => setShowPlaylistModal(false)}
               >
-                <Text style={[styles.modalCloseButtonText, { color: colors.textSecondary }]}>
-                  Cancel
-                </Text>
+                <Text style={[theme.typography.labelBold, { color: colors.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -232,110 +307,95 @@ const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    marginBottom: 16,
     borderWidth: 1,
     overflow: 'hidden',
-    marginHorizontal: 15,
   },
-  gradientHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  headerContent: {
+  authorRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  title: {
-    fontSize: 20,
-    fontFamily: 'PlayfairDisplay-VariableFont_wght',
-    fontWeight: 'bold',
+  authorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     flex: 1,
-    marginRight: 12,
-    lineHeight: 26,
   },
-  authorBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backdropFilter: 'blur(10px)',
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  authorBadgeText: {
-    color: 'white',
-    fontSize: 12,
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
   },
-  contentContainer: {
-    padding: 16,
+  handle: {
+    fontSize: 13,
   },
-  content: {
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 12,
-    fontFamily: 'Inter-Regular',
+  timestamp: {
+    marginTop: 1,
   },
-  themesContainer: {
+  body: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  contentWrapper: {
+    marginTop: 8,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  fadeMask: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 24,
+  },
+  tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 8,
+    marginTop: 12,
   },
-  themePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
   },
-  themeText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-  },
-  footer: {
+  actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderTopWidth: 1,
   },
-  metaInfo: {
+  actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
-  formBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  actionCount: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
   },
-  formText: {
+  actionLabel: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
   },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  actionText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Regular',
-  },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -343,22 +403,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     width: '90%',
     maxHeight: '70%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'PlayfairDisplay-VariableFont_wght',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
   },
   playlistsList: {
     maxHeight: 300,
@@ -373,76 +421,15 @@ const styles = StyleSheet.create({
   playlistInfo: {
     flex: 1,
   },
-  playlistTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-  },
-  playlistCount: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    marginTop: 2,
-  },
   noPlaylistsContainer: {
     alignItems: 'center',
     paddingVertical: 40,
-  },
-  noPlaylistsText: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    marginTop: 15,
-  },
-  noPlaylistsSubtext: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
-    marginTop: 5,
-  },
-  playlistItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8f9fa',
-  },
-  playlistInfo: {
-    flex: 1,
-  },
-  playlistTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-  },
-  playlistCount: {
-    fontSize: 14,
-    color: '#7f8c8d',
-    marginTop: 2,
-  },
-  noPlaylistsContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  noPlaylistsText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#7f8c8d',
-    marginTop: 15,
-  },
-  noPlaylistsSubtext: {
-    fontSize: 14,
-    color: '#bdc3c7',
-    textAlign: 'center',
-    marginTop: 5,
   },
   modalCloseButton: {
     padding: 12,
-    borderRadius: 25,
+    borderRadius: 8,
     alignItems: 'center',
     marginTop: 15,
-  },
-  modalCloseButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
   },
 });
 

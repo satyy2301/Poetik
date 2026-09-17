@@ -9,16 +9,18 @@ import {
   Alert,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { useOpenAI } from '../context/OpenAIContext';
 import { FEATURES } from '../config/features';
-import ComingSoonBanner from '../components/ComingSoonBanner';
 import RichTextEditor, { RichTextEditorRef } from '../components/RichTextEditor';
+import ScreenContainer from '../components/layout/ScreenContainer';
+import Button from '../components/ui/Button';
+import { useTheme } from '../context/ThemeContext';
 import TemplateSelector from '../components/TemplateSelector';
 import VersionHistoryModal from '../components/VersionHistoryModal';
 import { publishPoem as publishPoemToDb } from '../services/poemService';
@@ -37,7 +39,7 @@ import { validateForm, estimateReadingTime } from '../utils/formValidators';
 import { requestAIWriting, AI_TEMPLATES, AITemplate } from '../services/aiWritingTools';
 import { logActivity } from '../services/activityService';
 
-type WriteScreenProps = NativeStackScreenProps<RootStackParamList, 'Write'>;
+type WriteScreenProps = { navigation: { navigate: (screen: string) => void } };
 
 const POEM_CATEGORIES = [
   'Romantic', 'Classic', 'Nature', 'Love', 'Melancholy', 'Joy', 'Spiritual',
@@ -50,6 +52,8 @@ const AUTO_SAVE_MS = 30000;
 const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const { user } = useAuth();
   const { apiKey, setApiKey } = useOpenAI();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const editorRef = useRef<RichTextEditorRef>(null);
 
   const [title, setTitle] = useState('');
@@ -291,40 +295,45 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     );
   };
 
-  const containerStyle = darkMode ? styles.containerDark : styles.container;
+  const editorBg = darkMode ? colors.bgElevated : colors.bgCanvas;
   const headerHidden = focusMode;
 
   return (
-    <View style={containerStyle}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: editorBg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={80}
+    >
+      <ScreenContainer edges={[]} contentStyle={styles.editorSheet}>
       {!headerHidden && (
         <View style={styles.header}>
-          <Text style={[styles.screenTitle, darkMode && styles.textDark]}>New Poem</Text>
+          <Text style={[theme.typography.displaySm, { color: colors.textPrimary }]}>New Poem</Text>
           <View style={styles.headerActions}>
             {saveStatus === 'saved' && (
-              <Text style={styles.savedText}>Saved</Text>
+              <Text style={[theme.typography.bodySm, { color: colors.success }]}>Saved</Text>
             )}
             <TouchableOpacity onPress={() => setShowTemplateModal(true)} style={styles.iconBtn}>
-              <Ionicons name="document-text-outline" size={22} color="#3498db" />
+              <Ionicons name="document-text-outline" size={22} color={colors.brandPrimary} />
             </TouchableOpacity>
             {versions.length > 0 && (
               <TouchableOpacity onPress={() => setShowVersionModal(true)} style={styles.iconBtn}>
-                <Ionicons name="time-outline" size={22} color="#3498db" />
+                <Ionicons name="time-outline" size={22} color={colors.brandPrimary} />
+              </TouchableOpacity>
+            )}
+            {FEATURES.AI_ENABLED ? (
+              <TouchableOpacity onPress={requestAISuggestions} style={styles.iconBtn} disabled={isAiLoading}>
+                <MaterialIcons name="auto-awesome" size={22} color={colors.brandPrimary} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.iconBtn} disabled>
+                <Ionicons name="sparkles-outline" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={() => setFocusMode(!focusMode)} style={styles.iconBtn}>
-              <Ionicons name={focusMode ? 'expand' : 'contract'} size={22} color="#3498db" />
+              <Ionicons name={focusMode ? 'expand' : 'contract'} size={22} color={colors.brandPrimary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setDarkMode(!darkMode)} style={styles.iconBtn}>
-              <Ionicons name={darkMode ? 'sunny' : 'moon'} size={22} color="#3498db" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.publishButton, isPublishing && styles.publishDisabled]}
-              onPress={handlePublishPress}
-              disabled={isPublishing}
-            >
-              <Text style={styles.publishText}>
-                {isPublishing ? 'Publishing...' : 'Publish'}
-              </Text>
+              <Ionicons name={darkMode ? 'sunny' : 'moon'} size={22} color={colors.brandPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -368,10 +377,16 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
           )}
 
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>
-              {wordCount} words · {syllableCount} syllables · ~{readingTime} min read
-            </Text>
-            {selectedForm && <Text style={styles.formTag}>{selectedForm}</Text>}
+            <View style={[styles.statusChip, { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle }]}>
+              <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+                {wordCount} words · {syllableCount} syllables
+              </Text>
+            </View>
+            {selectedForm && (
+              <Text style={[theme.typography.bodySm, { color: colors.brandPrimary, fontFamily: 'Inter-Bold' }]}>
+                {selectedForm}
+              </Text>
+            )}
           </View>
 
           <View style={styles.aiSection}>
@@ -445,25 +460,26 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.aiButton}
-                    onPress={requestAISuggestions}
-                    disabled={isAiLoading}
-                  >
-                    <MaterialIcons name="auto-awesome" size={20} color={isAiLoading ? '#bdc3c7' : '#3498db'} />
-                    <Text style={styles.aiButtonText}>
-                      {isAiLoading ? 'Thinking...' : 'AI Assistant'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                ) : null}
               </>
-            ) : (
-              <ComingSoonBanner message="AI writing help will return in a future update." />
-            )}
+            ) : null}
           </View>
         </>
       )}
+
+      {!focusMode && (
+        <View style={[styles.publishBar, { backgroundColor: colors.bgSurface, borderTopColor: colors.borderMuted }]}>
+          <Button
+            title={isPublishing ? 'Publishing...' : 'Publish Poem'}
+            onPress={handlePublishPress}
+            variant="primary"
+            loading={isPublishing}
+            disabled={isPublishing}
+            style={styles.publishBtnFull}
+          />
+        </View>
+      )}
+      </ScreenContainer>
 
       <TemplateSelector
         visible={showTemplateModal}
@@ -566,13 +582,13 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
           </View>
         </Modal>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 15, backgroundColor: '#f8f9fa' },
-  containerDark: { flex: 1, padding: 15, backgroundColor: '#16213e' },
+  container: { flex: 1 },
+  editorSheet: { flex: 1, paddingBottom: 0 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
   textDark: { color: '#ecf0f1' },
@@ -589,8 +605,9 @@ const styles = StyleSheet.create({
   hintTitle: { fontWeight: '600', color: '#2980b9', marginBottom: 4 },
   hintText: { fontSize: 12, color: '#3498db' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  metaText: { fontSize: 12, color: '#7f8c8d' },
-  formTag: { fontSize: 11, color: '#3498db', fontWeight: '600', backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  statusChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  publishBar: { padding: 16, borderTopWidth: 1, marginTop: 8 },
+  publishBtnFull: { width: '100%' },
   aiSection: { marginTop: 4 },
   aiTemplates: { marginBottom: 8 },
   aiChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#ecf0f1', marginRight: 6 },

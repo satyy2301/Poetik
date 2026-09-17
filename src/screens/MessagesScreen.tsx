@@ -13,8 +13,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
+import EmptyState from '../components/ui/EmptyState';
+import ChatScreen from './ChatScreen';
 import { getConversations } from '../features/messaging/messagingService';
 import { supabase } from '../lib/supabase';
+import { hapticLight } from '../utils/haptics';
 
 type Conversation = {
   other: { id: string; name: string; avatar_url?: string };
@@ -26,12 +30,8 @@ const formatTime = (iso: string) => {
   const d = new Date(iso);
   const now = new Date();
   const diff = now.getTime() - d.getTime();
-  if (diff < 86400000) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  if (diff < 604800000) {
-    return d.toLocaleDateString([], { weekday: 'short' });
-  }
+  if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short' });
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
@@ -40,10 +40,12 @@ const MessagesScreen = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { isMobile } = useResponsive();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<Conversation['other'] | null>(null);
 
   const fetchConversations = useCallback(async () => {
     if (!user) return;
@@ -85,9 +87,7 @@ const MessagesScreen = () => {
       });
 
       const list = Array.from(map.values()).sort(
-        (a, b) =>
-          new Date(b.lastMessage.created_at).getTime() -
-          new Date(a.lastMessage.created_at).getTime(),
+        (a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime(),
       );
       setConversations(list);
     } catch (err) {
@@ -98,95 +98,127 @@ const MessagesScreen = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+  useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
   const openChat = (other: Conversation['other']) => {
-    navigation.navigate('Chat', { userId: other.id, name: other.name });
+    if (isMobile) {
+      navigation.navigate('Chat', { userId: other.id, name: other.name });
+    } else {
+      setSelectedChat(other);
+    }
+  };
+
+  const renderConversation = ({ item }: { item: Conversation }) => {
+    const isActive = selectedChat?.id === item.other.id;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.row,
+          {
+            backgroundColor: isActive ? colors.cardHeaderTint : colors.bgSurface,
+            borderBottomColor: colors.borderMuted,
+          },
+        ]}
+        onPress={() => openChat(item.other)}
+        activeOpacity={0.7}
+      >
+        {item.other.avatar_url ? (
+          <Image source={{ uri: item.other.avatar_url }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatarPlaceholder, { backgroundColor: colors.brandPrimary }]}>
+            <Text style={styles.avatarText}>{item.other.name[0]?.toUpperCase()}</Text>
+          </View>
+        )}
+        <View style={styles.rowContent}>
+          <View style={styles.rowTop}>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+              {item.other.name}
+            </Text>
+            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+              {formatTime(item.lastMessage.created_at)}
+            </Text>
+          </View>
+          <View style={styles.rowBottom}>
+            <Text style={[theme.typography.bodySm, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
+              {item.lastMessage.content}
+            </Text>
+            {item.unread && (
+              <View style={[styles.unreadBadge, { backgroundColor: colors.brandPrimary }]}>
+                <Text style={styles.unreadText}>1</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
   };
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.center, { backgroundColor: colors.bgCanvas }]}>
+        <ActivityIndicator size="large" color={colors.brandPrimary} />
+      </View>
+    );
+  }
+
+  const inboxList = (
+    <FlatList
+      data={conversations}
+      keyExtractor={(item) => item.other.id}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { setRefreshing(true); hapticLight(); fetchConversations(); }}
+          tintColor={colors.brandPrimary}
+        />
+      }
+      ListEmptyComponent={
+        <EmptyState
+          icon="mail-outline"
+          title="No conversations yet"
+          description="Visit a poet's profile and tap Message to start chatting."
+          actionLabel="Start a new conversation"
+          onAction={() => navigation.navigate('Search')}
+        />
+      }
+      renderItem={renderConversation}
+    />
+  );
+
+  if (!isMobile) {
+    return (
+      <View style={[styles.splitContainer, { backgroundColor: colors.bgCanvas }]}>
+        <View style={[styles.inboxPane, { borderRightColor: colors.borderMuted, backgroundColor: colors.bgSurface }]}>
+          {inboxList}
+        </View>
+        <View style={styles.chatPane}>
+          {selectedChat ? (
+            <ChatScreen embeddedUserId={selectedChat.id} embeddedName={selectedChat.name} />
+          ) : (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title="Select a conversation"
+              description="Choose a poet from your inbox to start chatting."
+            />
+          )}
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.heading, { color: colors.text }]}>Messages</Text>
-      </View>
-
-      <FlatList
-        data={conversations}
-        keyExtractor={(item) => item.other.id}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              fetchConversations();
-            }}
-            tintColor={colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversations yet</Text>
-            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-              Visit a poet's profile and tap Message to start chatting.
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.row, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
-            onPress={() => openChat(item.other)}
-            activeOpacity={0.7}
-          >
-            {item.other.avatar_url ? (
-              <Image source={{ uri: item.other.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
-                <Text style={styles.avatarText}>{item.other.name[0]?.toUpperCase()}</Text>
-              </View>
-            )}
-            <View style={styles.rowContent}>
-              <View style={styles.rowTop}>
-                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-                  {item.other.name}
-                </Text>
-                <Text style={[styles.time, { color: colors.textSecondary }]}>
-                  {formatTime(item.lastMessage.created_at)}
-                </Text>
-              </View>
-              <View style={styles.rowBottom}>
-                <Text
-                  style={[styles.preview, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                >
-                  {item.lastMessage.content}
-                </Text>
-                {item.unread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        )}
-      />
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      {inboxList}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  splitContainer: { flex: 1, flexDirection: 'row' },
+  inboxPane: { width: 340, borderRightWidth: 1 },
+  chatPane: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
-  heading: { fontSize: 22, fontWeight: '700' },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,14 +237,17 @@ const styles = StyleSheet.create({
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 18 },
   rowContent: { flex: 1 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  name: { fontWeight: '700', fontSize: 15, flex: 1, marginRight: 8 },
-  time: { fontSize: 12 },
   rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  preview: { fontSize: 13, flex: 1 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 8 },
-  empty: { alignItems: 'center', padding: 40, marginTop: 40 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', marginTop: 16 },
-  emptyHint: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  unreadBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+    paddingHorizontal: 4,
+  },
+  unreadText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 });
 
 export default MessagesScreen;

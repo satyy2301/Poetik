@@ -177,7 +177,7 @@ const CommunityScreen = () => {
     }
   };
 
-  const renderPost = ({ item: post }) => {
+  const renderPost = ({ item: post }: { item: any }) => {
     if (post.poem) {
       // Post contains a shared poem
       return (
@@ -213,7 +213,7 @@ const CommunityScreen = () => {
     );
   };
 
-  const renderPoem = ({ item: poem }) => (
+  const renderPoem = ({ item: poem }: { item: any }) => (
     <PoemCard
       poem={poem}
       onPress={() => handlePoemPress(poem)}

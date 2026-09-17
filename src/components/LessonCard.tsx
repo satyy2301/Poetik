@@ -1,33 +1,74 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 import ProgressRing from './ProgressRing';
 
+const formIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
+  sonnet: 'document-text-outline',
+  haiku: 'leaf-outline',
+  'free verse': 'water-outline',
+};
+
 const LessonCard = ({ lesson, onPress }: { lesson: any; onPress: () => void }) => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const progress = lesson.completed ? 1 : lesson.progress || 0;
+  const formKey = (lesson.form || lesson.type || '').toLowerCase();
+  const iconName = formIcons[formKey] || 'book-outline';
+  const lessonCount = lesson.steps?.length || lesson.lesson_count || 0;
 
   return (
     <TouchableOpacity
-      style={[styles.container, lesson.locked && styles.lockedContainer]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.bgSurface,
+          borderColor: colors.borderMuted,
+        },
+        lesson.locked && styles.lockedContainer,
+        theme.shadows.card,
+      ]}
       onPress={!lesson.locked ? onPress : undefined}
       activeOpacity={0.7}
     >
       <View style={styles.topRow}>
-        <View style={styles.info}>
-          {lesson.locked && (
-            <View style={styles.lockBadge}>
-              <Text style={styles.lockText}>Locked</Text>
-            </View>
+        <View style={[styles.iconBox, { backgroundColor: colors.cardHeaderTint }]}>
+          {lesson.locked ? (
+            <Ionicons name="lock-closed" size={22} color={colors.textSecondary} />
+          ) : (
+            <Ionicons name={iconName} size={22} color={colors.brandPrimary} />
           )}
-          <Text style={styles.title}>{lesson.title}</Text>
-          <Text style={styles.description}>{lesson.description}</Text>
         </View>
-        <ProgressRing progress={progress} size={52} color={lesson.completed ? '#2ecc71' : '#3498db'} />
+
+        <View style={styles.info}>
+          <Text style={[theme.typography.labelBold, { color: colors.textPrimary, fontSize: 16 }]}>
+            {lesson.title}
+          </Text>
+          <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4 }]} numberOfLines={2}>
+            {lesson.description}
+          </Text>
+          <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 6 }]}>
+            {lessonCount} lessons · Level {lesson.difficulty || 1}
+          </Text>
+        </View>
+
+        <ProgressRing
+          progress={progress}
+          size={48}
+          color={lesson.completed ? colors.success : colors.brandPrimary}
+        />
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.difficulty}>Level {lesson.difficulty || 1}</Text>
-        <Text style={styles.xp}>{lesson.xp_reward || lesson.xpReward || 10} XP</Text>
-        {lesson.completed && <Text style={styles.done}>Completed</Text>}
+      <View style={[styles.footer, { borderTopColor: colors.borderMuted }]}>
+        <Text style={[theme.typography.bodySm, { color: colors.bookmarkGold, fontFamily: 'Inter-Bold' }]}>
+          {lesson.xp_reward || lesson.xpReward || 10} XP
+        </Text>
+        {lesson.completed && (
+          <Text style={[theme.typography.bodySm, { color: colors.success, fontFamily: 'Inter-Bold' }]}>
+            Completed
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -35,30 +76,21 @@ const LessonCard = ({ lesson, onPress }: { lesson: any; onPress: () => void }) =
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
   },
-  lockedContainer: { opacity: 0.65 },
-  topRow: { flexDirection: 'row', alignItems: 'center' },
-  info: { flex: 1, paddingRight: 12 },
-  lockBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#e74c3c',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  lockedContainer: { opacity: 0.55 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBox: {
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    marginBottom: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  lockText: { color: 'white', fontSize: 11, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: 'bold', color: '#2c3e50' },
-  description: { color: '#7f8c8d', marginTop: 6, lineHeight: 20 },
+  info: { flex: 1 },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -66,11 +98,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
   },
-  difficulty: { color: '#3498db', fontWeight: '500' },
-  xp: { color: '#f39c12', fontWeight: 'bold' },
-  done: { color: '#2ecc71', fontWeight: '700', fontSize: 12 },
 });
 
 export default React.memo(LessonCard);

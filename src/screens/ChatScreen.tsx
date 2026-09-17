@@ -25,16 +25,23 @@ import {
   toggleReaction,
   Message,
 } from '../features/messaging/messagingService';
+import { hapticLight } from '../utils/haptics';
 
-const ChatScreen = () => {
+type ChatScreenProps = {
+  embeddedUserId?: string;
+  embeddedName?: string;
+};
+
+const ChatScreen = ({ embeddedUserId, embeddedName }: ChatScreenProps = {}) => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  const recipientUserId: string = route.params?.userId;
-  const recipientName: string = route.params?.name || 'Poet';
+  const recipientUserId: string = embeddedUserId || route.params?.userId;
+  const recipientName: string = embeddedName || route.params?.name || 'Poet';
+  const isEmbedded = !!embeddedUserId;
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,10 +57,11 @@ const ChatScreen = () => {
     try {
       const { data, error } = await getMessages(user.id, recipientUserId, 200, 0);
       if (error) throw error;
-      setMessages((data || []) as Message[]);
-      const unreadIds = (data || [])
-        .filter((m: Message) => !m.read && m.sender_id === recipientUserId)
-        .map((m: Message) => m.id);
+      const rows = (data || []) as unknown as Message[];
+      setMessages(rows);
+      const unreadIds = rows
+        .filter((m) => !m.read && m.sender_id === recipientUserId)
+        .map((m) => m.id);
       if (unreadIds.length) await markAsRead(unreadIds);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 200);
     } catch (err) {
@@ -112,6 +120,7 @@ const ChatScreen = () => {
     setMessages((prev) => [...prev, tempMsg]);
     setText('');
     setSending(true);
+    hapticLight();
     try {
       await setTypingStatus(user.id, recipientUserId, false);
       const { data: inserted, error } = await sendMessage(user.id, recipientUserId, content);
@@ -149,9 +158,11 @@ const ChatScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        {!isEmbedded && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+        )}
         <View style={styles.headerInfo}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>{recipientName}</Text>
           {isOtherTyping && (

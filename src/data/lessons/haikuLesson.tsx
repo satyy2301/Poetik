@@ -1,5 +1,5 @@
 // src/data/lessons/haikuLesson.ts
-import { Lesson } from '../features/learning/lessonTypes';
+import { Lesson } from '../../features/learning/lessonTypes';
 
 const haikuLesson: Lesson = {
   id: 'haiku-basics',

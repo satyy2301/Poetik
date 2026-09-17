@@ -1,33 +1,27 @@
 // src/features/learning/learningPaths.ts
-import { Lesson } from './lessonTypes';
 import haikuLesson from '../../data/lessons/haikuLesson';
-import sonnetLesson from '../../data/lessons/sonnetLesson';
-import metaphorLesson from '../../data/lessons/metaphorLesson';
 
 export const learningPaths = {
   beginner: [
     {
       title: 'Form Fundamentals',
       description: 'Master basic poetic structures',
-      lessons: [haikuLesson, sonnetLesson],
+      lessons: [haikuLesson],
       icon: '📝',
     },
     {
       title: 'Technique Toolkit',
       description: 'Essential poetic devices',
-      lessons: [metaphorLesson],
+      lessons: [haikuLesson],
       icon: '🛠️',
-    }
+    },
   ],
-  intermediate: [
-    // More advanced paths...
-  ]
+  intermediate: [],
 };
 
-export const getRecommendedPath = (userProgress: any) => {
-  // AI-powered recommendation logic
+export const getRecommendedPath = (userProgress: { completedLessons?: string[] }) => {
   if (!userProgress.completedLessons?.length) {
     return learningPaths.beginner[0];
   }
-  // More sophisticated logic would go here...
+  return learningPaths.beginner[0];
 };

@@ -2,7 +2,18 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const LessonStep = ({ step, stepNumber, totalSteps }) => {
+type LessonStepProps = {
+  step: {
+    title?: string;
+    content?: string;
+    examples?: string[];
+    instructions?: string;
+  };
+  stepNumber: number;
+  totalSteps: number;
+};
+
+const LessonStep = ({ step, stepNumber, totalSteps }: LessonStepProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.stepIndicator}>Step {stepNumber} of {totalSteps}</Text>
@@ -13,7 +24,7 @@ const LessonStep = ({ step, stepNumber, totalSteps }) => {
       {step.examples && (
         <View style={styles.examplesContainer}>
           <Text style={styles.examplesTitle}>Examples:</Text>
-          {step.examples.map((example, index) => (
+          {step.examples.map((example: string, index: number) => (
             <View key={index} style={styles.example}>
               <Text style={styles.exampleText}>{example}</Text>
             </View>

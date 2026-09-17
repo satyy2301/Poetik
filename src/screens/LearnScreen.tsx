@@ -8,7 +8,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import LessonCard from '../components/LessonCard';
 import ProgressBar from '../components/ProgressBar';
 import XPGainToast from '../components/XPGainToast';
@@ -17,8 +17,11 @@ import StreakCounter from '../components/StreakCounter';
 import StatsCard from '../components/analytics/StatsCard';
 import ActivityChart from '../components/analytics/ActivityChart';
 import CourseCertificate from '../components/CourseCertificate';
+import ScreenContainer from '../components/layout/ScreenContainer';
+import Button from '../components/ui/Button';
 import { useUser } from '../context/UserContext';
 import { useProgress } from '../context/ProgressContext';
+import { useTheme } from '../context/ThemeContext';
 import { fetchLessonsWithProgress } from '../services/lessonService';
 import { getTodaysChallenge, DailyChallenge } from '../services/challengeService';
 import { Lesson } from '../types/lesson';
@@ -27,6 +30,8 @@ import { levelProgress } from '../utils/xpCalculator';
 
 const LearnScreen = ({ navigation }: any) => {
   const { user } = useUser();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const {
     xp,
     level,
@@ -54,9 +59,7 @@ const LearnScreen = ({ navigation }: any) => {
       ]);
       setLessons(lessonData);
       setDailyChallenge(challenge);
-
-      const allComplete =
-        lessonData.length > 0 && lessonData.every((lesson) => lesson.completed);
+      const allComplete = lessonData.length > 0 && lessonData.every((lesson) => lesson.completed);
       if (allComplete) setShowCertificate(true);
     } catch (err) {
       console.warn('fetchLearningData err', err);
@@ -96,22 +99,19 @@ const LearnScreen = ({ navigation }: any) => {
       };
       const { error } = await supabase.from('lessons').insert([sample]);
       if (error) throw error;
-      Alert.alert('Seeded', 'Basic lesson added. Run seed_lessons.sql for full set.');
+      Alert.alert('Seeded', 'Basic lesson added.');
       loadData();
-    } catch (err) {
+    } catch {
       Alert.alert('Seed failed', 'Check console for details.');
     }
   };
 
   const weeklyActivity = [1, 2, 1, 3, 2, completedLessons.length % 4, streak % 3];
   const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const completionRate =
-    lessons.length > 0
-      ? Math.round((completedLessons.length / lessons.length) * 100)
-      : 0;
+  const completionRate = lessons.length > 0 ? Math.round((completedLessons.length / lessons.length) * 100) : 0;
 
   return (
-    <LinearGradient colors={['#f5f7fa', '#e6eef8']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
       <XPGainToast amount={lastXpGain} onDone={clearXpToast} />
       <AchievementToast achievement={newAchievement} onDone={clearAchievementToast} />
       <CourseCertificate
@@ -120,36 +120,42 @@ const LearnScreen = ({ navigation }: any) => {
         onClose={() => setShowCertificate(false)}
       />
 
-      <View style={styles.header}>
-        <View style={styles.xpCard}>
-          <Text style={styles.xpLabel}>XP</Text>
-          <Text style={styles.xpValue}>{xp}</Text>
-          <Text style={styles.xpSub}>Level {level}</Text>
-          {streak > 0 && <Text style={styles.streak}>{streak}d streak</Text>}
+      <View style={[styles.gamifiedHeader, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
+        <View style={styles.badgeRow}>
+          <View style={[styles.badge, { backgroundColor: colors.cardHeaderTint }]}>
+            <Text>🔥</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>{streak} Days</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: colors.cardHeaderTint }]}>
+            <Text>⚡</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>{xp} XP</Text>
+          </View>
+          <View style={[styles.badge, { backgroundColor: colors.cardHeaderTint }]}>
+            <Text>🛡️</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Lvl {level}</Text>
+          </View>
         </View>
 
-        <View style={styles.progressContainerHeader}>
-          <Text style={styles.title}>Poetry Academy</Text>
-          <Text style={styles.subtitle}>Master the art of verse</Text>
-          <ProgressBar progress={levelProgress(xp)} color="#0984e3" />
+        <View style={styles.headerMain}>
+          <View style={{ flex: 1 }}>
+            <Text style={[theme.typography.displaySm, { color: colors.textPrimary }]}>Poetry Academy</Text>
+            <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4 }]}>
+              Master the art of verse
+            </Text>
+            <ProgressBar progress={levelProgress(xp)} color={colors.brandPrimary} />
+          </View>
+          <Button title="AI Tutor" onPress={() => navigation.navigate('AITutor')} variant="secondary" size="compact" />
         </View>
-
-        <TouchableOpacity
-          style={styles.tutorButton}
-          onPress={() => navigation.navigate('AITutor')}
-        >
-          <Text style={styles.tutorText}>AI Tutor</Text>
-        </TouchableOpacity>
       </View>
 
-      <View style={styles.tabsRow}>
+      <View style={[styles.tabsRow, { borderBottomColor: colors.borderMuted }]}>
         {(['courses', 'challenges', 'progress', 'quiz'] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            style={[styles.tab, activeTab === tab && { borderBottomColor: colors.brandPrimary }]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+            <Text style={[theme.typography.labelBold, { color: activeTab === tab ? colors.brandPrimary : colors.textSecondary, fontSize: 13 }]}>
               {tab === 'courses' ? 'Courses' : tab === 'challenges' ? 'Daily' : tab === 'progress' ? 'Progress' : 'Quiz'}
             </Text>
           </TouchableOpacity>
@@ -158,168 +164,100 @@ const LearnScreen = ({ navigation }: any) => {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
       >
-        {activeTab === 'courses' && (
-          <View>
-            <Text style={styles.sectionTitle}>Featured Courses</Text>
-            {lessons.map((lesson) => (
-              <LessonCard key={lesson.id} lesson={lesson} onPress={() => openLesson(lesson)} />
-            ))}
-            <TouchableOpacity
-              style={[styles.startButton, { backgroundColor: '#6c5ce7' }]}
-              onPress={seedLessons}
-            >
-              <Text style={styles.startText}>Seed Lessons</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {activeTab === 'challenges' && (
-          <View>
-            <Text style={styles.sectionTitle}>Today's Challenge</Text>
-            {dailyChallenge ? (
-              <View style={styles.challengeCard}>
-                <Text style={styles.challengeTitle}>{dailyChallenge.task}</Text>
-                <Text style={styles.challengeXP}>+{dailyChallenge.xp_reward} XP</Text>
-                <TouchableOpacity
-                  style={styles.startButton}
-                  onPress={() =>
-                    navigation.navigate('ChallengeDetail', { challenge: dailyChallenge })
-                  }
-                >
-                  <Text style={styles.startText}>Start Challenge</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.empty}>No challenge for today. Run seedChallenges script.</Text>
-            )}
-          </View>
-        )}
-
-        {activeTab === 'progress' && (
-          <View>
-            <Text style={styles.sectionTitle}>Your Progress</Text>
-            <View style={styles.statsRow}>
-              <StatsCard label="Total XP" value={xp} accent="#3498db" />
-              <StatsCard label="Level" value={level} accent="#9b59b6" />
-              <StreakCounter streak={streak} size="sm" />
-            </View>
-            <ActivityChart data={weeklyActivity} labels={weekLabels} />
-            <View style={styles.progressCard}>
-              <Text style={styles.progressLarge}>{completionRate}%</Text>
-              <Text style={styles.progressSmall}>
-                {completedLessons.length} of {lessons.length} lessons complete
+        <ScreenContainer edges={[]} scrollable={false}>
+          {activeTab === 'courses' && (
+            <View>
+              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
+                Featured Courses
               </Text>
-              <ProgressBar progress={progress} />
+              {lessons.map((lesson) => (
+                <LessonCard key={lesson.id} lesson={lesson} onPress={() => openLesson(lesson)} />
+              ))}
+              {__DEV__ && (
+                <Button title="Seed Lessons" onPress={seedLessons} variant="ghost" />
+              )}
             </View>
-            <View style={styles.quickLinks}>
-              <TouchableOpacity
-                style={styles.linkBtn}
-                onPress={() => navigation.navigate('Achievements')}
-              >
-                <Text style={styles.linkText}>View Achievements</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkBtn}
-                onPress={() => navigation.navigate('Leaderboard')}
-              >
-                <Text style={styles.linkText}>Leaderboard</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.linkBtn}
-                onPress={() => navigation.navigate('StudyTogether')}
-              >
-                <Text style={styles.linkText}>Study Together</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+          )}
 
-        {activeTab === 'quiz' && (
-          <View>
-            <Text style={styles.sectionTitle}>Quizzes</Text>
-            <TouchableOpacity
-              style={[styles.startButton, { backgroundColor: '#6c5ce7' }]}
-              onPress={() => navigation.navigate('QuizList')}
-            >
-              <Text style={styles.startText}>Take a Quiz</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {activeTab === 'challenges' && (
+            <View>
+              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
+                Today's Challenge
+              </Text>
+              {dailyChallenge ? (
+                <View style={[styles.challengeCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+                  <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>{dailyChallenge.task}</Text>
+                  <Text style={[theme.typography.bodySm, { color: colors.bookmarkGold, marginTop: 8 }]}>
+                    +{dailyChallenge.xp_reward} XP
+                  </Text>
+                  <Button
+                    title="Start Challenge"
+                    onPress={() => navigation.navigate('ChallengeDetail', { challenge: dailyChallenge })}
+                    variant="primary"
+                    style={{ marginTop: 12 }}
+                  />
+                </View>
+              ) : (
+                <Text style={[theme.typography.bodyMd, { color: colors.textSecondary }]}>No challenge for today.</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'progress' && (
+            <View>
+              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
+                Your Progress
+              </Text>
+              <View style={styles.statsRow}>
+                <StatsCard label="Total XP" value={xp} accent={colors.brandPrimary} />
+                <StatsCard label="Level" value={level} accent={colors.brandSecondary} />
+                <StreakCounter streak={streak} size="sm" />
+              </View>
+              <ActivityChart data={weeklyActivity} labels={weekLabels} />
+              <View style={[styles.progressCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+                <Text style={[theme.typography.statNumber, { color: colors.textPrimary }]}>{completionRate}%</Text>
+                <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginBottom: 10 }]}>
+                  {completedLessons.length} of {lessons.length} lessons complete
+                </Text>
+                <ProgressBar progress={progress} color={colors.brandPrimary} />
+              </View>
+              <View style={styles.quickLinks}>
+                <Button title="View Achievements" onPress={() => navigation.navigate('Achievements')} variant="secondary" />
+                <Button title="Leaderboard" onPress={() => navigation.navigate('Leaderboard')} variant="secondary" />
+                <Button title="Study Together" onPress={() => navigation.navigate('StudyTogether')} variant="secondary" />
+              </View>
+            </View>
+          )}
+
+          {activeTab === 'quiz' && (
+            <View>
+              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
+                Quizzes
+              </Text>
+              <Button title="Take a Quiz" onPress={() => navigation.navigate('QuizList')} variant="primary" />
+            </View>
+          )}
+        </ScreenContainer>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    padding: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  xpCard: {
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: 100,
-    elevation: 2,
-  },
-  xpLabel: { fontSize: 12, color: '#636e72' },
-  xpValue: { fontSize: 20, fontWeight: 'bold' },
-  xpSub: { fontSize: 12, color: '#636e72' },
-  streak: { fontSize: 11, color: '#e67e22', marginTop: 4, fontWeight: '600' },
-  progressContainerHeader: { flex: 1, marginLeft: 12 },
-  title: { fontSize: 20, fontWeight: 'bold' },
-  subtitle: { color: '#636e72', marginBottom: 8 },
-  tutorButton: { backgroundColor: '#0984e3', padding: 10, borderRadius: 12 },
-  tutorText: { color: 'white', fontWeight: '600' },
-  tabsRow: { flexDirection: 'row', paddingHorizontal: 18, marginTop: 8 },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },
-  activeTab: { borderBottomWidth: 2, borderBottomColor: '#0984e3' },
-  tabText: { color: '#636e72', fontSize: 13 },
-  activeTabText: { color: '#0984e3', fontWeight: '700' },
-  content: { padding: 18, paddingBottom: 40 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
-  challengeCard: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    elevation: 2,
-  },
-  challengeTitle: { fontSize: 16, fontWeight: 'bold' },
-  challengeXP: { color: '#f1c40f', marginTop: 8 },
-  startButton: {
-    marginTop: 10,
-    backgroundColor: '#00b894',
-    padding: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  startText: { color: 'white', fontWeight: '700' },
-  progressCard: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  progressLarge: { fontSize: 32, fontWeight: 'bold' },
-  progressSmall: { color: '#636e72', marginBottom: 10 },
+  gamifiedHeader: { padding: 16, borderBottomWidth: 1 },
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  headerMain: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  tabsRow: { flexDirection: 'row', borderBottomWidth: 1 },
+  tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  content: { paddingBottom: 40 },
+  challengeCard: { padding: 16, borderRadius: 16, borderWidth: 1 },
+  progressCard: { padding: 16, borderRadius: 16, alignItems: 'center', marginBottom: 12, borderWidth: 1 },
   statsRow: { flexDirection: 'row', marginBottom: 12 },
   quickLinks: { gap: 8 },
-  linkBtn: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 14,
-    alignItems: 'center',
-    elevation: 1,
-  },
-  linkText: { color: '#0984e3', fontWeight: '700' },
-  empty: { color: '#95a5a6' },
 });
 
 export default LearnScreen;

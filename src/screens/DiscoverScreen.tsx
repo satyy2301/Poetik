@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import PoemCard from '../components/PoemCard';
+import ScreenContainer from '../components/layout/ScreenContainer';
+import SkeletonPoemCard from '../components/loaders/SkeletonPoemCard';
 import { Poem } from '../types/poem';
 import {
   fetchTrendingPoems,
@@ -14,9 +17,13 @@ import {
 } from '../services/discoveryService';
 import { incrementPoemLikes } from '../services/poemService';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
+import { useTheme } from '../context/ThemeContext';
+import { hapticLight } from '../utils/haptics';
 
 const DiscoverScreen = () => {
   const navigation = useNavigation<any>();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [trending, setTrending] = useState<Poem[]>([]);
   const [picks, setPicks] = useState<Poem[]>([]);
   const [digest, setDigest] = useState<Poem[]>([]);
@@ -46,11 +53,13 @@ const DiscoverScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    hapticLight();
     await load();
     setRefreshing(false);
   };
 
   const handleRandom = async () => {
+    hapticLight();
     const poem = await fetchRandomPoem();
     setRandomPoem(poem);
   };
@@ -59,89 +68,106 @@ const DiscoverScreen = () => {
     await incrementPoemLikes(poemId);
   };
 
+  const renderPoem = (poem: Poem, key?: string) => (
+    <PoemCard
+      key={key || poem.id}
+      poem={poem}
+      onPress={() => openPoemDetail(navigation, poem)}
+      onAuthorPress={() => openAuthorProfile(navigation, poem.author?.id ?? poem.author_id)}
+      onLike={() => handleLike(poem.id)}
+    />
+  );
+
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#3498db" /></View>;
+    return (
+      <ScreenContainer edges={[]}>
+        <SkeletonPoemCard />
+        <SkeletonPoemCard />
+      </ScreenContainer>
+    );
   }
 
   return (
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.bgCanvas }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
     >
-      <TouchableOpacity style={styles.randomBtn} onPress={handleRandom}>
-        <Text style={styles.randomText}>🎲 Random Poem</Text>
-      </TouchableOpacity>
+      <ScreenContainer edges={[]} scrollable={false}>
+        <TouchableOpacity
+          style={[styles.serendipityPill, { backgroundColor: colors.cardHeaderTint, borderColor: colors.borderSubtle }]}
+          onPress={handleRandom}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="dice-outline" size={20} color={colors.brandPrimary} />
+          <View style={styles.serendipityText}>
+            <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
+              Serendipity Dice
+            </Text>
+            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+              Discover a random verse
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+        </TouchableOpacity>
 
-      {randomPoem && (
-        <View style={styles.section}>
-          <PoemCard
-            poem={randomPoem}
-            onPress={() => openPoemDetail(navigation, randomPoem)}
-            onAuthorPress={() => openAuthorProfile(navigation, randomPoem.author)}
-            onLike={() => handleLike(randomPoem.id)}
-          />
+        {randomPoem && renderPoem(randomPoem, 'random')}
+
+        <Text style={[styles.sectionTitle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+          Trending This Week
+        </Text>
+        {trending.map((poem) => renderPoem(poem))}
+
+        <Text style={[styles.sectionTitle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+          Editors' Picks
+        </Text>
+        {picks.map((poem) => renderPoem(poem, `pick-${poem.id}`))}
+
+        <Text style={[styles.sectionTitle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+          Weekly Digest
+        </Text>
+        {digest.map((poem) => renderPoem(poem, `digest-${poem.id}`))}
+
+        <Text style={[styles.sectionTitle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+          New Authors
+        </Text>
+        <View style={styles.authorGrid}>
+          {authors.map((author) => (
+            <TouchableOpacity
+              key={author.id}
+              style={[styles.authorChip, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}
+              onPress={() => openAuthorProfile(navigation, author)}
+            >
+              <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
+                {author.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      )}
-
-      <Text style={styles.sectionTitle}>🔥 Trending This Week</Text>
-      {trending.map((poem) => (
-        <PoemCard
-          key={poem.id}
-          poem={poem}
-          onPress={() => openPoemDetail(navigation, poem)}
-          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
-          onLike={() => handleLike(poem.id)}
-        />
-      ))}
-
-      <Text style={styles.sectionTitle}>⭐ Editors' Picks</Text>
-      {picks.map((poem) => (
-        <PoemCard
-          key={`pick-${poem.id}`}
-          poem={poem}
-          onPress={() => openPoemDetail(navigation, poem)}
-          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
-          onLike={() => handleLike(poem.id)}
-        />
-      ))}
-
-      <Text style={styles.sectionTitle}>📬 Weekly Digest</Text>
-      {digest.map((poem) => (
-        <PoemCard
-          key={`digest-${poem.id}`}
-          poem={poem}
-          onPress={() => openPoemDetail(navigation, poem)}
-          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
-          onLike={() => handleLike(poem.id)}
-        />
-      ))}
-
-      <Text style={styles.sectionTitle}>✨ New Authors</Text>
-      <View style={styles.authorGrid}>
-        {authors.map((author) => (
-          <TouchableOpacity
-            key={author.id}
-            style={styles.authorChip}
-            onPress={() => openAuthorProfile(navigation, author)}
-          >
-            <Text style={styles.authorName}>{author.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      </ScreenContainer>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', padding: 12 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  randomBtn: { backgroundColor: '#6c5ce7', padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 16 },
-  randomText: { color: 'white', fontWeight: '700', fontSize: 16 },
-  section: { marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', marginVertical: 12 },
+  serendipityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  serendipityText: { flex: 1 },
+  sectionTitle: { fontSize: 16, marginVertical: 12 },
   authorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  authorChip: { backgroundColor: 'white', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, elevation: 1 },
-  authorName: { fontWeight: '600', color: '#3498db' },
+  authorChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
 });
 
 export default DiscoverScreen;

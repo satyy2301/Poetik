@@ -1,10 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Switch,
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
+  Switch,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useNotifications } from '../context/NotificationContext';
+import StackHeader from '../components/ui/StackHeader';
+import EmptyState from '../components/ui/EmptyState';
+import Button from '../components/ui/Button';
 import {
   fetchNotifications,
   markAsRead,
@@ -23,12 +35,18 @@ const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   system: 'notifications',
 };
 
+type Segment = 'all' | 'mentions' | 'milestones';
+
 const NotificationsScreen = ({ navigation }: any) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const { refreshUnread, clearUnread } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [segment, setSegment] = useState<Segment>('all');
+  const [showSettings, setShowSettings] = useState(false);
   const [prefs, setPrefs] = useState({ push_enabled: true, follow_enabled: true, message_enabled: true, like_enabled: true });
 
   const load = useCallback(async () => {
@@ -50,6 +68,12 @@ const NotificationsScreen = ({ navigation }: any) => {
     await refreshUnread();
     setRefreshing(false);
   };
+
+  const filtered = notifications.filter((n) => {
+    if (segment === 'mentions') return n.type === 'comment' || n.type === 'message';
+    if (segment === 'milestones') return n.type === 'follow' || n.type === 'like' || n.type === 'playlist';
+    return true;
+  });
 
   const handlePress = async (notif: Notification) => {
     if (!notif.read) {
@@ -76,70 +100,127 @@ const NotificationsScreen = ({ navigation }: any) => {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" /></View>;
+    return (
+      <View style={[styles.center, { backgroundColor: colors.bgCanvas }]}>
+        <ActivityIndicator size="large" color={colors.brandPrimary} />
+      </View>
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.prefs}>
-        <Text style={styles.prefsTitle}>Preferences</Text>
-        {[
-          { key: 'follow_enabled', label: 'New followers' },
-          { key: 'message_enabled', label: 'Messages' },
-          { key: 'like_enabled', label: 'Likes' },
-        ].map(({ key, label }) => (
-          <View key={key} style={styles.prefRow}>
-            <Text style={styles.prefLabel}>{label}</Text>
-            <Switch
-              value={(prefs as any)[key]}
-              onValueChange={(v) => togglePref(key, v)}
-            />
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      <StackHeader
+        title="Notifications"
+        onBack={() => navigation.goBack()}
+        rightActions={
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => setShowSettings(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={clearUnread} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="checkmark-done-outline" size={22} color={colors.brandPrimary} />
+            </TouchableOpacity>
           </View>
+        }
+      />
+
+      <View style={[styles.segmentRow, { borderBottomColor: colors.borderMuted }]}>
+        {(['all', 'mentions', 'milestones'] as Segment[]).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.segment, segment === s && { borderBottomColor: colors.brandPrimary }]}
+            onPress={() => setSegment(s)}
+          >
+            <Text style={[theme.typography.labelBold, { color: segment === s ? colors.brandPrimary : colors.textSecondary, fontSize: 13 }]}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </Text>
+          </TouchableOpacity>
         ))}
-        <TouchableOpacity style={styles.markAll} onPress={clearUnread}>
-          <Text style={styles.markAllText}>Mark all as read</Text>
-        </TouchableOpacity>
       </View>
 
       <FlatList
-        data={notifications}
+        data={filtered}
         keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        ListEmptyComponent={<Text style={styles.empty}>No notifications yet</Text>}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brandPrimary} />}
+        ListEmptyComponent={
+          <EmptyState
+            icon="create-outline"
+            title="Quiet for now"
+            description="When poets interact with your verses, you'll see it here."
+          />
+        }
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.row, !item.read && styles.unread]}
+            style={[
+              styles.row,
+              {
+                backgroundColor: item.read ? colors.bgSurface : colors.cardHeaderTint,
+                borderBottomColor: colors.borderMuted,
+              },
+            ]}
             onPress={() => handlePress(item)}
           >
-            <Ionicons name={iconMap[item.type] || 'notifications'} size={22} color="#3498db" />
+            <Ionicons name={iconMap[item.type] || 'notifications'} size={22} color={colors.brandPrimary} />
             <View style={styles.content}>
-              <Text style={styles.title}>{item.title}</Text>
-              {item.body && <Text style={styles.body} numberOfLines={2}>{item.body}</Text>}
-              <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
+              <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>{item.title}</Text>
+              {item.body && (
+                <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={2}>
+                  {item.body}
+                </Text>
+              )}
+              <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4, fontSize: 11 }]}>
+                {new Date(item.created_at).toLocaleString()}
+              </Text>
             </View>
           </TouchableOpacity>
         )}
       />
+
+      <Modal visible={showSettings} animationType="slide" transparent onRequestClose={() => setShowSettings(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.bgSurface }]}>
+            <Text style={[theme.typography.displaySm, { color: colors.textPrimary, marginBottom: 16 }]}>
+              Notification Settings
+            </Text>
+            {[
+              { key: 'follow_enabled', label: 'New followers' },
+              { key: 'message_enabled', label: 'Messages' },
+              { key: 'like_enabled', label: 'Likes' },
+            ].map(({ key, label }) => (
+              <View key={key} style={styles.prefRow}>
+                <Text style={[theme.typography.bodyMd, { color: colors.textPrimary }]}>{label}</Text>
+                <Switch
+                  value={(prefs as any)[key]}
+                  onValueChange={(v) => togglePref(key, v)}
+                  trackColor={{ false: colors.borderMuted, true: colors.brandPrimary }}
+                />
+              </View>
+            ))}
+            <Button title="Done" onPress={() => setShowSettings(false)} variant="primary" style={{ marginTop: 16 }} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  prefs: { backgroundColor: 'white', padding: 16, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' },
-  prefsTitle: { fontWeight: '700', marginBottom: 8, color: '#2c3e50' },
-  prefRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  prefLabel: { color: '#636e72' },
-  markAll: { marginTop: 8, alignSelf: 'flex-end' },
-  markAllText: { color: '#3498db', fontWeight: '600' },
-  row: { flexDirection: 'row', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#f1f1f1', gap: 12 },
-  unread: { backgroundColor: '#ebf5fb' },
+  headerActions: { flexDirection: 'row', gap: 12 },
+  segmentRow: { flexDirection: 'row', borderBottomWidth: 1 },
+  segment: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  row: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, gap: 12 },
   content: { flex: 1 },
-  title: { fontWeight: '700', color: '#2c3e50' },
-  body: { color: '#636e72', marginTop: 2, fontSize: 13 },
-  time: { color: '#bdc3c7', fontSize: 11, marginTop: 4 },
-  empty: { textAlign: 'center', color: '#95a5a6', marginTop: 40 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 },
+  prefRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
 });
 
 export default NotificationsScreen;

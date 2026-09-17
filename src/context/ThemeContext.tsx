@@ -2,64 +2,40 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from 'react-native';
+import {
+  SemanticColors,
+  lightColors,
+  darkColors,
+  typography,
+  spacing,
+  radius,
+  shadows,
+  layout,
+} from '../theme/tokens';
 
 type ThemeMode = 'light' | 'dark' | 'auto';
 
-interface ThemeColors {
-  primary: string;
-  secondary: string;
-  accent: string;
-  background: string;
-  surface: string;
-  text: string;
-  textSecondary: string;
-  border: string;
-  success: string;
-  warning: string;
-  error: string;
-  gradient: string[];
-}
-
-interface Theme {
-  colors: ThemeColors;
+export interface Theme {
+  colors: SemanticColors;
   isDark: boolean;
+  typography: typeof typography;
+  spacing: typeof spacing;
+  radius: typeof radius;
+  shadows: typeof shadows;
+  layout: typeof layout;
 }
 
-const lightTheme: Theme = {
-  colors: {
-    primary: '#6366f1',
-    secondary: '#8b5cf6',
-    accent: '#06b6d4',
-    background: '#f8fafc',
-    surface: '#ffffff',
-    text: '#1e293b',
-    textSecondary: '#64748b',
-    border: '#e2e8f0',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
-    gradient: ['#6366f1', '#8b5cf6', '#06b6d4']
-  },
-  isDark: false,
-};
+export type ThemeColors = SemanticColors;
 
-const darkTheme: Theme = {
-  colors: {
-    primary: '#818cf8',
-    secondary: '#a78bfa',
-    accent: '#22d3ee',
-    background: '#0f172a',
-    surface: '#1e293b',
-    text: '#f1f5f9',
-    textSecondary: '#94a3b8',
-    border: '#334155',
-    success: '#34d399',
-    warning: '#fbbf24',
-    error: '#f87171',
-    gradient: ['#818cf8', '#a78bfa', '#22d3ee']
-  },
-  isDark: true,
-};
+const buildTheme = (colors: SemanticColors, isDark: boolean): Theme => ({
+  colors,
+  isDark,
+  typography,
+  spacing,
+  radius,
+  shadows,
+  layout,
+});
 
 interface ThemeContextType {
   theme: Theme;
@@ -105,9 +81,13 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getEffectiveTheme = (): Theme => {
     if (themeMode === 'auto') {
-      return systemColorScheme === 'dark' ? darkTheme : lightTheme;
+      return systemColorScheme === 'dark'
+        ? buildTheme(darkColors, true)
+        : buildTheme(lightColors, false);
     }
-    return themeMode === 'dark' ? darkTheme : lightTheme;
+    return themeMode === 'dark'
+      ? buildTheme(darkColors, true)
+      : buildTheme(lightColors, false);
   };
 
   const theme = getEffectiveTheme();

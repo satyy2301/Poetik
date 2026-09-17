@@ -3,13 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Animated,
   ActivityIndicator,
 } from 'react-native';
 import { useUser } from '../context/UserContext';
 import { useProgress } from '../context/ProgressContext';
+import { useTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 import { getLessonById, completeLesson } from '../services/lessonService';
 import { Lesson, LessonStepData } from '../types/lesson';
 import TheoryStep from '../components/lesson-steps/TheoryStep';
@@ -19,11 +20,17 @@ import QuizStep from '../components/lesson-steps/QuizStep';
 import XPGainToast from '../components/XPGainToast';
 import Confetti from '../components/Confetti';
 import ProgressBar from '../components/ProgressBar';
-import { hapticLight, hapticSuccess } from '../utils/animations';
+import StackHeader from '../components/ui/StackHeader';
+import Button from '../components/ui/Button';
+import ScreenContainer from '../components/layout/ScreenContainer';
+import { hapticLight, hapticSuccess } from '../utils/haptics';
 
 const LessonsDetailScreen = ({ route, navigation }: any) => {
   const { lessonId } = route.params;
   const { user } = useUser();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const { isMobile } = useResponsive();
   const { addXp, refresh, checkAchievements, lastXpGain, clearXpToast } = useProgress();
   const [showConfetti, setShowConfetti] = useState(false);
   const [lesson, setLesson] = useState<Lesson | null>(null);
@@ -62,20 +69,12 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
 
   const renderStep = (step: LessonStepData) => {
     const type = normalizeType(step);
-
     switch (type) {
-      case 'theory':
-        return <TheoryStep step={step} />;
-      case 'example':
-        return <ExampleStep step={step} />;
-      case 'exercise':
-        return (
-          <ExerciseStep step={step} value={userResponse} onChange={setUserResponse} />
-        );
-      case 'quiz':
-        return <QuizStep step={step} onAnswered={() => setQuizAnswered(true)} />;
-      default:
-        return <TheoryStep step={step} />;
+      case 'theory': return <TheoryStep step={step} />;
+      case 'example': return <ExampleStep step={step} />;
+      case 'exercise': return <ExerciseStep step={step} value={userResponse} onChange={setUserResponse} />;
+      case 'quiz': return <QuizStep step={step} onAnswered={() => setQuizAnswered(true)} />;
+      default: return <TheoryStep step={step} />;
     }
   };
 
@@ -83,19 +82,13 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
     if (!lesson) return false;
     const step = lesson.steps[currentStep];
     const type = normalizeType(step);
-
-    if (type === 'exercise' && step.requiresResponse && !userResponse.trim()) {
-      return false;
-    }
-    if (type === 'quiz' && !quizAnswered) {
-      return false;
-    }
+    if (type === 'exercise' && step.requiresResponse && !userResponse.trim()) return false;
+    if (type === 'quiz' && !quizAnswered) return false;
     return true;
   };
 
   const handleComplete = async () => {
     if (!user || !lesson) return;
-
     const xpReward = lesson.xp_reward || 25;
     await completeLesson(user.id, lesson.id, xpReward);
     await addXp(xpReward);
@@ -108,7 +101,6 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
 
   const handleNext = () => {
     if (!lesson || !canProceed()) return;
-
     if (currentStep < lesson.steps.length - 1) {
       animateStepChange(currentStep + 1);
     } else {
@@ -122,8 +114,8 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
 
   if (loading || !lesson) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3498db" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.bgCanvas }]}>
+        <ActivityIndicator size="large" color={colors.brandPrimary} />
       </View>
     );
   }
@@ -131,69 +123,80 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
   const stepProgress = (currentStep + 1) / lesson.steps.length;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
       <XPGainToast amount={lastXpGain} onDone={clearXpToast} />
       <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.lessonTitle}>{lesson.title}</Text>
-        <Text style={styles.lessonDescription}>{lesson.description}</Text>
-
-        <Text style={styles.stepIndicator}>
-          Step {currentStep + 1} of {lesson.steps.length}
-        </Text>
-        <ProgressBar progress={stepProgress} color="#0984e3" />
-
-        <Animated.View style={{ opacity: fadeAnim, marginTop: 16 }}>
-          {renderStep(lesson.steps[currentStep])}
-        </Animated.View>
-      </ScrollView>
-
-      <View style={styles.navigationButtons}>
-        {currentStep > 0 && (
-          <TouchableOpacity style={styles.navButton} onPress={handlePrevious}>
-            <Text style={styles.navButtonText}>Previous</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[styles.navButton, styles.nextButton, !canProceed() && styles.disabled]}
-          onPress={handleNext}
-          disabled={!canProceed()}
-        >
-          <Text style={styles.navButtonText}>
-            {currentStep === lesson.steps.length - 1 ? 'Complete' : 'Next'}
+      <StackHeader
+        title={lesson.title}
+        onBack={() => navigation.goBack()}
+        useSerif
+        rightActions={
+          <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+            {Math.round(stepProgress * 100)}%
           </Text>
-        </TouchableOpacity>
+        }
+      />
+
+      <ProgressBar progress={stepProgress} color={colors.brandPrimary} />
+
+      <ScreenContainer edges={[]} scrollable contentStyle={styles.scrollContent}>
+        <View style={[styles.contentCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+          <Text style={[theme.typography.bodyMd, { color: colors.textSecondary, marginBottom: 16 }]}>
+            {lesson.description}
+          </Text>
+          <Text style={[theme.typography.labelBold, { color: colors.textSecondary, marginBottom: 12 }]}>
+            Step {currentStep + 1} of {lesson.steps.length}
+          </Text>
+          <Animated.View style={{ opacity: fadeAnim }}>
+            {renderStep(lesson.steps[currentStep])}
+          </Animated.View>
+        </View>
+      </ScreenContainer>
+
+      <View style={[styles.bottomBar, { backgroundColor: colors.bgSurface, borderTopColor: colors.borderMuted }]}>
+        {currentStep > 0 && (
+          <Button
+            title="Back"
+            onPress={handlePrevious}
+            variant="ghost"
+            style={isMobile ? styles.bottomBtn : undefined}
+          />
+        )}
+        <Button
+          title={currentStep === lesson.steps.length - 1 ? 'Complete' : 'Continue'}
+          onPress={handleNext}
+          variant="primary"
+          disabled={!canProceed()}
+          style={[isMobile ? styles.bottomBtnFull : styles.bottomBtnRight, !canProceed() && styles.disabled]}
+        />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContainer: { padding: 20, paddingBottom: 100 },
-  lessonTitle: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50', marginBottom: 8 },
-  lessonDescription: { fontSize: 16, color: '#7f8c8d', marginBottom: 16 },
-  stepIndicator: { color: '#636e72', marginBottom: 8, fontWeight: '600' },
-  navigationButtons: {
+  scrollContent: { paddingBottom: 100 },
+  contentCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+    marginTop: 16,
+  },
+  bottomBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 20,
-    backgroundColor: 'white',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
   },
-  navButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 25,
-    backgroundColor: '#bdc3c7',
-  },
-  nextButton: { backgroundColor: '#2ecc71', marginLeft: 'auto' },
+  bottomBtn: { flex: 1 },
+  bottomBtnFull: { flex: 1 },
+  bottomBtnRight: { minWidth: 140 },
   disabled: { opacity: 0.5 },
-  navButtonText: { color: 'white', fontWeight: 'bold' },
 });
 
 export default LessonsDetailScreen;

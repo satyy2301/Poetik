@@ -1,5 +1,5 @@
-import * as Haptics from 'expo-haptics';
 import { Animated, Easing } from 'react-native';
+import { hapticLight, hapticMedium, hapticSuccess } from './haptics';
 
 export const fadeSlideIn = (opacity: Animated.Value, translateY: Animated.Value) =>
   Animated.parallel([
@@ -39,6 +39,4 @@ export const animateProgress = (animatedValue: Animated.Value, to: number) =>
     useNativeDriver: false,
   });
 
-export const hapticLight = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-export const hapticSuccess = () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-export const hapticMedium = () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+export { hapticLight, hapticMedium, hapticSuccess };

@@ -79,18 +79,13 @@ const MainTabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ color, size }) => {
-          let iconName;
-
-          if (route.name === 'Read') {
-            iconName = 'book-outline';
-          } else if (route.name === 'Write') {
-            iconName = 'create-outline';
-          } else if (route.name === 'Learn') {
-            iconName = 'school-outline';
-          } else if (route.name === 'Messages') {
-            iconName = 'chatbubbles-outline';
-          }
-
+          const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+            Read: 'book-outline',
+            Write: 'create-outline',
+            Learn: 'school-outline',
+            Messages: 'chatbubbles-outline',
+          };
+          const iconName = icons[route.name] ?? 'ellipse-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
@@ -144,7 +139,7 @@ const AppNavigator = () => {
       />
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="LessonDetail" component={LessonDetailScreen} />
+      <Stack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
       <Stack.Screen name="QuizList" component={QuizListScreen} />
       <Stack.Screen name="QuizDetail" component={QuizDetailScreen} options={{ title: 'Quiz' }} />

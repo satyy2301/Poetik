@@ -112,7 +112,8 @@ const PoemScreen = () => {
   const handleAddToPlaylist = async (playlistId: string, title: string) => {
     const { error } = await addPoemToPlaylist(playlistId, poemData.id);
     if (error) {
-      Alert.alert('Error', error.message.includes('already') ? 'Already in playlist' : 'Could not add poem');
+      const msg = (error as Error).message || '';
+      Alert.alert('Error', msg.includes('already') ? 'Already in playlist' : 'Could not add poem');
       return;
     }
     setShowPlaylistModal(false);

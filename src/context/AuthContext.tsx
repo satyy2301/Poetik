@@ -22,19 +22,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkUser();
 
     // Subscribe to auth state changes
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      // session may be null after sign out
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
 
     return () => {
-      // unsubscribe
-      try {
-        subscription?.unsubscribe();
-      } catch (e) {
-        // ignore
-      }
+      subscription.unsubscribe();
     };
   }, []);
 

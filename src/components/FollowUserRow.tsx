@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FollowUser } from '../services/followService';
+import { hapticLight } from '../utils/haptics';
 
 type Props = {
   user: FollowUser;
@@ -57,7 +58,7 @@ const FollowUserRow = ({
             ? { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }
             : { backgroundColor: colors.primary },
         ]}
-        onPress={onAction}
+        onPress={() => { hapticLight(); onAction(); }}
         disabled={actionLoading}
       >
         <Text

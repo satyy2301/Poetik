@@ -35,7 +35,11 @@ describe('formValidators', () => {
     const result = validateForm('line one\nline two', {
       id: 'haiku',
       name: 'Haiku',
+      form: 'Haiku',
+      description: 'Three lines',
       structure: '3 lines',
+      scaffold: 'line one\nline two\nline three',
+      example: 'An old pond...',
       lineCount: 3,
     });
     expect(result.valid).toBe(false);

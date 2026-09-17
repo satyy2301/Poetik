@@ -14,7 +14,7 @@ const PlaylistScreen = () => {
   const { theme } = useTheme();
   const colors = theme.colors;
   const navigation = useNavigation<any>();
-  const [playlists, setPlaylists] = useState([]);
+  const [playlists, setPlaylists] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');

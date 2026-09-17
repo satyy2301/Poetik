@@ -81,7 +81,7 @@ export const getAuthorPoems = async (
 
   if (error) throw error;
 
-  const rows = (data || []) as Poem[];
+  const rows = (data || []) as unknown as Poem[];
   return {
     poems: rows.slice(0, pageSize),
     hasMore: rows.length > pageSize,

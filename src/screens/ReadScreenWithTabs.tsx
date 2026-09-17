@@ -18,18 +18,18 @@ const ReadScreenWithTabs = () => {
   ];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      <View style={[styles.header, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, activeTab === tab.key && { borderBottomColor: colors.primary }]}
+              style={[styles.tab, activeTab === tab.key && { borderBottomColor: colors.brandPrimary }]}
               onPress={() => setActiveTab(tab.key)}
             >
               <Text style={[
                 styles.tabText,
-                { color: activeTab === tab.key ? colors.primary : colors.textSecondary },
+                { color: activeTab === tab.key ? colors.brandPrimary : colors.textSecondary },
               ]}>
                 {tab.label}
               </Text>

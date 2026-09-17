@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { PoemFilters, PoemSort } from '../types/poem';
+import { useTheme } from '../context/ThemeContext';
+import Button from './ui/Button';
 
 type PoemFilterProps = {
   currentFilters: PoemFilters;
@@ -16,6 +18,8 @@ const PoemFilter = ({
   onFilterChange,
   onSortChange,
 }: PoemFilterProps) => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [showFilters, setShowFilters] = useState(false);
   const [localFilters, setLocalFilters] = useState(currentFilters);
   const [localSort, setLocalSort] = useState<PoemSort>(currentSort);
@@ -45,28 +49,26 @@ const PoemFilter = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
       <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.filterButton}
+        <Button
+          title={showFilters ? 'Hide Filters' : 'Filter & Sort'}
           onPress={() => setShowFilters(!showFilters)}
-        >
-          <Text style={styles.filterButtonText}>
-            {showFilters ? 'Hide Filters' : 'Filter & Sort'}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.sortLabel}>
+          variant="secondary"
+          size="compact"
+        />
+        <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
           Sort: {sorts.find((s) => s.value === currentSort)?.label || 'Newest'}
         </Text>
       </View>
 
       {showFilters && (
-        <View style={styles.filterPanel}>
+        <View style={[styles.filterPanel, { backgroundColor: colors.bgElevated }]}>
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Sort:</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Sort:</Text>
             <Picker
               selectedValue={localSort}
-              style={styles.picker}
+              style={[styles.picker, { backgroundColor: colors.bgSurface, color: colors.textPrimary }]}
               onValueChange={(value) => setLocalSort(value as PoemSort)}
             >
               {sorts.map((option) => (
@@ -76,10 +78,10 @@ const PoemFilter = ({
           </View>
 
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Era:</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Era:</Text>
             <Picker
               selectedValue={localFilters.era}
-              style={styles.picker}
+              style={[styles.picker, { backgroundColor: colors.bgSurface }]}
               onValueChange={(value) => setLocalFilters({ ...localFilters, era: value })}
             >
               <Picker.Item label="All Eras" value={null} />
@@ -90,24 +92,24 @@ const PoemFilter = ({
           </View>
 
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Theme:</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Theme:</Text>
             <Picker
               selectedValue={localFilters.theme}
-              style={styles.picker}
+              style={[styles.picker, { backgroundColor: colors.bgSurface }]}
               onValueChange={(value) => setLocalFilters({ ...localFilters, theme: value })}
             >
               <Picker.Item label="All Themes" value={null} />
-              {themes.map((theme) => (
-                <Picker.Item key={theme} label={theme} value={theme} />
+              {themes.map((t) => (
+                <Picker.Item key={t} label={t} value={t} />
               ))}
             </Picker>
           </View>
 
           <View style={styles.filterGroup}>
-            <Text style={styles.filterLabel}>Form:</Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Form:</Text>
             <Picker
               selectedValue={localFilters.form}
-              style={styles.picker}
+              style={[styles.picker, { backgroundColor: colors.bgSurface }]}
               onValueChange={(value) => setLocalFilters({ ...localFilters, form: value })}
             >
               <Picker.Item label="All Forms" value={null} />
@@ -118,12 +120,8 @@ const PoemFilter = ({
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>Clear</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </TouchableOpacity>
+            <Button title="Clear" onPress={clearFilters} variant="ghost" style={styles.actionBtn} />
+            <Button title="Apply" onPress={applyFilters} variant="primary" style={styles.actionBtn} />
           </View>
         </View>
       )}
@@ -134,48 +132,22 @@ const PoemFilter = ({
 const styles = StyleSheet.create({
   container: {
     padding: 10,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sortLabel: { color: '#636e72', fontSize: 13 },
-  filterButton: {
-    backgroundColor: '#3498db',
-    padding: 10,
-    borderRadius: 5,
-  },
-  filterButtonText: { color: 'white', fontWeight: 'bold' },
   filterPanel: {
     marginTop: 10,
     padding: 10,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 5,
+    borderRadius: 10,
   },
   filterGroup: { marginBottom: 15 },
-  filterLabel: { fontWeight: 'bold', marginBottom: 5 },
-  picker: { backgroundColor: 'white' },
+  picker: { borderRadius: 8 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  applyButton: {
-    flex: 1,
-    backgroundColor: '#2ecc71',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  applyButtonText: { color: 'white', fontWeight: 'bold' },
-  clearButton: {
-    flex: 1,
-    backgroundColor: '#e9ecef',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  clearButtonText: { color: '#636e72', fontWeight: 'bold' },
+  actionBtn: { flex: 1 },
 });
 
 export default PoemFilter;

@@ -3,8 +3,13 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const CommunityPost = ({ post, currentUserId }) => {
-  const isLiked = post.likes?.some(like => like.user_id === currentUserId);
+type CommunityPostProps = {
+  post: any;
+  currentUserId: string;
+};
+
+const CommunityPost = ({ post, currentUserId }: CommunityPostProps) => {
+  const isLiked = post.likes?.some((like: { user_id: string }) => like.user_id === currentUserId);
   
   return (
     <View style={styles.container}>
@@ -55,7 +60,7 @@ const CommunityPost = ({ post, currentUserId }) => {
   );
 };
 
-const formatTime = (dateString) => {
+const formatTime = (_dateString: string) => {
   // Implement your time formatting logic
   return '2h ago';
 };

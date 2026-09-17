@@ -28,12 +28,15 @@ export const getQuizById = async (quizId: string): Promise<Quiz | null> => {
 
   if (error) return null;
 
+  const row = data as any;
+  const lessonTitle = Array.isArray(row.lessons) ? row.lessons[0]?.title : row.lessons?.title;
+
   return {
-    id: data.id,
-    lesson_id: data.lesson_id,
-    title: data.lessons?.title || 'Poetry Quiz',
-    questions: data.questions as QuizQuestion[],
-    created_at: data.created_at,
+    id: row.id,
+    lesson_id: row.lesson_id,
+    title: lessonTitle || 'Poetry Quiz',
+    questions: row.questions as QuizQuestion[],
+    created_at: row.created_at,
   };
 };
 
