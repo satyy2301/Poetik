@@ -4,11 +4,12 @@
 
 https://github.com/user-attachments/assets/89c0503c-4d30-4f1c-b148-f8b59cb30d54
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.72+-blue.svg)](https://reactnative.dev)
+<img width="285" height="610" alt="image" src="https://github.com/user-attachments/assets/3add6cfd-d359-4de7-ab30-1332973d5067" />
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E.svg)](https://supabase.com)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT-412991.svg)](https://openai.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 
 ---
 
