@@ -1,291 +1,218 @@
-// src/screens/MessagesScreen.tsx
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useUser } from '../context/UserContext';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages,
-  setTypingStatus, subscribeToTyping, toggleReaction, searchMessages, archiveConversation,
-} from '../features/messaging/messagingService';
-import MessageReactions from '../components/MessageReactions';
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { getConversations } from '../features/messaging/messagingService';
 import { supabase } from '../lib/supabase';
 
-const MessagesScreen = ({ navigation }: any) => {
-  const { user } = useUser();
-  const [conversations, setConversations] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [loadingConvos, setLoadingConvos] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [text, setText] = useState('');
-  const [isOtherTyping, setIsOtherTyping] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [nameMap, setNameMap] = useState<Record<string, string>>({});
-  const scrollRef = useRef<ScrollView | null>(null);
-  const typingTimer = useRef<NodeJS.Timeout | null>(null);
+type Conversation = {
+  other: { id: string; name: string; avatar_url?: string };
+  lastMessage: { content: string; created_at: string; read: boolean; receiver_id: string };
+  unread: boolean;
+};
 
-  useEffect(() => {
+const formatTime = (iso: string) => {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  if (diff < 86400000) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diff < 604800000) {
+    return d.toLocaleDateString([], { weekday: 'short' });
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
+const MessagesScreen = () => {
+  const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
-    fetchConversations();
-    const unsubMessages = subscribeToMessages(handleRealtimeMessage);
-    const unsubTyping = subscribeToTyping(handleTypingPayload);
-    return () => {
-      try { unsubMessages(); } catch (e) {}
-      try { unsubTyping(); } catch (e) {}
-    };
-  }, [user]);
-
-  useEffect(() => {
-    return () => {
-      if (typingTimer.current) clearTimeout(typingTimer.current);
-    };
-  }, []);
-
-  const fetchConversations = async () => {
-    setLoadingConvos(true);
     try {
-      const res: any = await getConversations(user.id, 50, 0);
-      const { data } = res;
-      // Build simple conversation list keyed by other user
-      const ids = new Set<string>();
-      (data || []).forEach((msg: any) => {
-        ids.add(msg.sender_id === user.id ? msg.receiver_id : msg.sender_id);
-      });
-      const { data: authors } = await supabase.from('authors').select('id, name').in('id', Array.from(ids));
-      const names: Record<string, string> = {};
-      (authors || []).forEach((a) => { names[a.id] = a.name; });
-      setNameMap(names);
+      const { data, error } = await getConversations(user.id, 100, 0);
+      if (error) throw error;
 
-      const map = new Map();
+      const otherIds = new Set<string>();
+      (data || []).forEach((msg: any) => {
+        otherIds.add(msg.sender_id === user.id ? msg.receiver_id : msg.sender_id);
+      });
+
+      const { data: authors } = await supabase
+        .from('authors')
+        .select('id, user_id, name, avatar_url')
+        .or(`id.in.(${Array.from(otherIds).join(',')}),user_id.in.(${Array.from(otherIds).join(',')})`);
+
+      const nameMap: Record<string, { name: string; avatar_url?: string }> = {};
+      (authors || []).forEach((a) => {
+        const entry = { name: a.name, avatar_url: a.avatar_url };
+        nameMap[a.id] = entry;
+        if (a.user_id) nameMap[a.user_id] = entry;
+      });
+
+      const map = new Map<string, Conversation>();
       (data || []).forEach((msg: any) => {
         const otherId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
-        const key = otherId;
-        if (!map.has(key)) {
-          map.set(key, {
-            other: { id: otherId, name: names[otherId] || 'Poet' },
+        if (!map.has(otherId)) {
+          map.set(otherId, {
+            other: {
+              id: otherId,
+              name: nameMap[otherId]?.name || 'Poet',
+              avatar_url: nameMap[otherId]?.avatar_url,
+            },
             lastMessage: msg,
             unread: !msg.read && msg.receiver_id === user.id,
           });
         }
       });
-      const list = Array.from(map.values()).sort((a: any, b: any) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime());
+
+      const list = Array.from(map.values()).sort(
+        (a, b) =>
+          new Date(b.lastMessage.created_at).getTime() -
+          new Date(a.lastMessage.created_at).getTime(),
+      );
       setConversations(list);
     } catch (err) {
-      console.error('Failed to fetch convos', err);
+      console.error('Failed to fetch conversations', err);
     } finally {
-      setLoadingConvos(false);
+      setLoading(false);
+      setRefreshing(false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  const openChat = (other: Conversation['other']) => {
+    navigation.navigate('Chat', { userId: other.id, name: other.name });
   };
 
-  const openConversation = async (otherUser: any) => {
-    setSelectedUser(otherUser);
-    setLoadingMessages(true);
-    try {
-      const res: any = await getMessages(user.id, otherUser.id, 200, 0);
-      const { data } = res;
-      setMessages(data || []);
-      // Mark unread messages as read
-      const unreadIds = (data || []).filter((m: any) => !m.read && m.sender_id === otherUser.id).map((m: any) => m.id);
-      if (unreadIds.length) {
-        await markAsRead(unreadIds);
-        // refresh conversations
-        fetchConversations();
-      }
-      // scroll to bottom after a tick
-      setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true } as any), 200);
-      // notify that user has opened conversation -> clear typing indicator for other
-      try { await setTypingStatus(user.id, otherUser.id, false); } catch (e) { }
-    } catch (err) {
-      console.error('Failed to fetch messages', err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!text.trim() || !selectedUser) return;
-    const tempId = `temp-${Date.now()}`;
-    const tempMsg = {
-      id: tempId,
-      content: text.trim(),
-      created_at: new Date().toISOString(),
-      read: false,
-      sender_id: user.id,
-    };
-    setMessages(prev => [...prev, tempMsg]);
-    setText('');
-    // indicate stopped typing
-    try { await setTypingStatus(user.id, selectedUser.id, false); } catch (e) { }
-    setSending(true);
-    try {
-      const res: any = await sendMessage(user.id, selectedUser.id, tempMsg.content);
-      const inserted = res.data?.[0];
-      if (inserted) {
-        // replace temp message id with real one
-        setMessages(prev => prev.map(m => m.id === tempId ? inserted : m));
-      } else {
-        // fallback: refresh messages
-        openConversation(selectedUser);
-      }
-      // refresh conversations list
-      fetchConversations();
-    } catch (err) {
-      console.error('Send failed', err);
-    } finally {
-      setSending(false);
-      setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true } as any), 200);
-    }
-  };
-
-  // When user types, send typing status with debounce
-  const handleTyping = async (value: string) => {
-    setText(value);
-    if (!selectedUser) return;
-    try {
-      await setTypingStatus(user.id, selectedUser.id, true);
-    } catch (e) {
-      // ignore
-    }
-    if (typingTimer.current) clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(async () => {
-      try { await setTypingStatus(user.id, selectedUser.id, false); } catch (e) { }
-    }, 2000);
-  };
-
-  const handleRealtimeMessage = (payload: any) => {
-    try {
-      const event = payload?.event;
-      const record = payload?.payload?.new || payload?.payload?.record || payload?.record;
-      if (!record) return;
-      // if conversation visible, append
-      const otherId = record.sender_id === user.id ? record.receiver_id : record.sender_id;
-      if (selectedUser && (record.sender_id === selectedUser.id || record.receiver_id === selectedUser.id)) {
-        // fetch sender relation data (payload may include joins — but if not, just append)
-        setMessages(prev => [...prev, { ...record, sender: { id: record.sender_id } }]);
-        // mark as read if it's for me
-        if (record.receiver_id === user.id) markAsRead([record.id]);
-      }
-      // update conversation list
-      fetchConversations();
-    } catch (e) {
-      console.warn('Realtime handling error', e);
-    }
-  };
-
-  const handleTypingPayload = (payload: any) => {
-    try {
-      const record = payload?.payload?.new || payload?.payload?.record || payload?.record;
-      if (!record || !selectedUser) return;
-      // if other user is typing to me
-      if (record.user_id === selectedUser.id && record.other_user_id === user.id) {
-        setIsOtherTyping(!!record.is_typing);
-      }
-    } catch (e) {
-      console.warn('Typing payload error', e);
-    }
-  };
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.listPane}>
-        <Text style={styles.heading}>Messages</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search messages..."
-          value={searchQuery}
-          onChangeText={async (q) => {
-            setSearchQuery(q);
-            if (q.length > 2) await searchMessages(user.id, q);
-          }}
-        />
-        {loadingConvos ? <ActivityIndicator /> : (
-          <FlatList
-            data={conversations}
-            keyExtractor={(item: any) => item.other.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.convoItem} onPress={() => openConversation(item.other)}>
-                <Text style={styles.convoTitle}>{item.other.name || item.other.id}</Text>
-                <Text numberOfLines={1} style={styles.convoPreview}>{item.lastMessage?.content}</Text>
-              </TouchableOpacity>
-            )}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.heading, { color: colors.text }]}>Messages</Text>
+      </View>
+
+      <FlatList
+        data={conversations}
+        keyExtractor={(item) => item.other.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchConversations();
+            }}
+            tintColor={colors.primary}
           />
-        )}
-      </View>
-
-      <View style={styles.chatPane}>
-        {selectedUser ? (
-          <>
-            <View style={styles.chatHeader}>
-              <Text style={styles.chatTitle}>{selectedUser.name || selectedUser.id}</Text>
-              {isOtherTyping && <Text style={{ color: '#636e72', marginTop: 4, fontSize: 12 }}>typing...</Text>}
-            </View>
-            {loadingMessages ? <ActivityIndicator /> : (
-              <ScrollView ref={scrollRef} style={styles.messagesScroll}>
-                {messages.map((m: any) => (
-                  <View key={m.id} style={[styles.messageBubble, m.sender_id === user.id ? styles.outgoing : styles.incoming]}>
-                    {m.message_type === 'poem' && m.poem ? (
-                      <Text style={styles.messageText}>📜 {m.poem.title}</Text>
-                    ) : (
-                      <Text style={styles.messageText}>{m.content}</Text>
-                    )}
-                    {m.edited_at && <Text style={styles.edited}>edited</Text>}
-                    <MessageReactions
-                      reactions={m.reactions || {}}
-                      currentUserId={user.id}
-                      onReact={async (emoji) => {
-                        await toggleReaction(m.id, emoji, user.id, m.reactions || {});
-                        openConversation(selectedUser);
-                      }}
-                    />
-                    <Text style={styles.messageTime}>{new Date(m.created_at).toLocaleTimeString()}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={80}>
-              <View style={styles.composer}>
-                <TextInput style={styles.input} value={text} onChangeText={handleTyping} placeholder="Write a message..." />
-                <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={sending}>
-                  <Text style={styles.sendText}>{sending ? '...' : 'Send'}</Text>
-                </TouchableOpacity>
-              </View>
-            </KeyboardAvoidingView>
-          </>
-        ) : (
-          <View style={styles.emptyPane}>
-            <Text style={styles.emptyText}>Select a conversation to start chatting.</Text>
+        }
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="chatbubbles-outline" size={48} color={colors.textSecondary} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No conversations yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Visit a poet's profile and tap Message to start chatting.
+            </Text>
           </View>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[styles.row, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+            onPress={() => openChat(item.other)}
+            activeOpacity={0.7}
+          >
+            {item.other.avatar_url ? (
+              <Image source={{ uri: item.other.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>{item.other.name[0]?.toUpperCase()}</Text>
+              </View>
+            )}
+            <View style={styles.rowContent}>
+              <View style={styles.rowTop}>
+                <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
+                  {item.other.name}
+                </Text>
+                <Text style={[styles.time, { color: colors.textSecondary }]}>
+                  {formatTime(item.lastMessage.created_at)}
+                </Text>
+              </View>
+              <View style={styles.rowBottom}>
+                <Text
+                  style={[styles.preview, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  {item.lastMessage.content}
+                </Text>
+                {item.unread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
         )}
-      </View>
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, flexDirection: 'row' },
-  listPane: { width: 320, borderRightWidth: 1, borderRightColor: '#ecf0f1', padding: 10 },
-  heading: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  convoItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f1f1f1' },
-  convoTitle: { fontWeight: '600' },
-  convoPreview: { color: '#7f8c8d' },
-  chatPane: { flex: 1, padding: 10 },
-  chatHeader: { borderBottomWidth: 1, borderBottomColor: '#ecf0f1', paddingBottom: 10, marginBottom: 10 },
-  chatTitle: { fontSize: 16, fontWeight: 'bold' },
-  messagesScroll: { flex: 1, marginBottom: 10 },
-  messageBubble: { marginVertical: 6, padding: 10, borderRadius: 8, maxWidth: '80%' },
-  incoming: { backgroundColor: '#f1f2f6', alignSelf: 'flex-start' },
-  outgoing: { backgroundColor: '#74b9ff', alignSelf: 'flex-end' },
-  messageText: { color: '#2d3436' },
-  messageTime: { fontSize: 10, color: '#636e72', marginTop: 6 },
-  edited: { fontSize: 10, color: '#95a5a6', fontStyle: 'italic' },
-  searchInput: { borderWidth: 1, borderColor: '#ecf0f1', borderRadius: 8, padding: 8, marginBottom: 8, fontSize: 13 },
-  composer: { flexDirection: 'row', alignItems: 'center', paddingTop: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ecf0f1', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8 },
-  sendButton: { backgroundColor: '#0984e3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },
-  sendText: { color: 'white', fontWeight: '600' },
-  emptyPane: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#95a5a6' },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+  heading: { fontSize: 22, fontWeight: '700' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { color: '#fff', fontWeight: '700', fontSize: 18 },
+  rowContent: { flex: 1 },
+  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  name: { fontWeight: '700', fontSize: 15, flex: 1, marginRight: 8 },
+  time: { fontSize: 12 },
+  rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  preview: { fontSize: 13, flex: 1 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, marginLeft: 8 },
+  empty: { alignItems: 'center', padding: 40, marginTop: 40 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', marginTop: 16 },
+  emptyHint: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
 });
 
 export default MessagesScreen;

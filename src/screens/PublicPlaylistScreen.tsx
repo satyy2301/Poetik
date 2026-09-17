@@ -13,6 +13,8 @@ import {
   incrementPlayCount,
 } from '../features/playlists/playlistService';
 import PoemCard from '../components/PoemCard';
+import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
+import { incrementPoemLikes } from '../services/poemService';
 
 const PublicPlaylistScreen = ({ navigation }: any) => {
   const route = useRoute<any>();
@@ -92,9 +94,9 @@ const PublicPlaylistScreen = ({ navigation }: any) => {
         renderItem={({ item }) => (
           <PoemCard
             poem={item}
-            onPress={() => navigation.navigate('PoemDetail', { poem: item })}
-            onAuthorPress={() => navigation.navigate('AuthorProfile', { author: item.author })}
-            onLike={() => {}}
+            onPress={() => openPoemDetail(navigation, item)}
+            onAuthorPress={() => openAuthorProfile(navigation, item.author)}
+            onLike={() => incrementPoemLikes(item.id)}
           />
         )}
       />

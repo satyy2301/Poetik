@@ -12,6 +12,7 @@ import LearnScreen from '../screens/LearnScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import MessagesScreen from '../screens/MessagesScreen';
+import ChatScreen from '../screens/ChatScreen';
 import LessonDetailScreen from '../screens/LessonsDetailScreen';
 import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
 import QuizListScreen from '../screens/QuizListScreen';
@@ -161,6 +162,7 @@ const AppNavigator = () => {
       <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
       <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
       <Stack.Screen name="StudyTogether" component={LazyStudyTogetherScreen} options={{ title: 'Study Together' }} />
+      <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

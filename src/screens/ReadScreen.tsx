@@ -5,6 +5,7 @@ import PoemCard from '../components/PoemCard';
 import PoemFilter from '../components/PoemFilter';
 import { Poem, PoemFilters, PoemSort } from '../types/poem';
 import { fetchPoems, incrementPoemLikes } from '../services/poemService';
+import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { getFollowingIds } from '../services/followService';
 import { useUser } from '../context/UserContext';
 
@@ -76,13 +77,11 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   };
 
   const handleViewPoem = (poem: Poem) => {
-    navigation.navigate('PoemDetail', { poem });
+    openPoemDetail(navigation, poem);
   };
 
   const handleViewAuthor = (author: { id: string; name?: string }) => {
-    navigation.navigate('AuthorProfile', {
-      author: { id: author.id, name: author.name || 'Unknown' },
-    });
+    openAuthorProfile(navigation, { id: author.id, name: author.name || 'Unknown' });
   };
 
   const handleLike = async (poemId: string) => {

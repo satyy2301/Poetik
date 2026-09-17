@@ -26,6 +26,32 @@ const POEM_SELECT = `
   author:authors(id, name)
 `;
 
+/** Resolve an authors.id or auth user id to the linked auth.users id for follow/message actions. */
+export const resolveAuthorAccountId = async (authorOrUserId: string): Promise<string | null> => {
+  let author = await getAuthorById(authorOrUserId);
+  if (!author) {
+    const { data } = await supabase
+      .from('authors')
+      .select(AUTHOR_SELECT)
+      .eq('user_id', authorOrUserId)
+      .maybeSingle();
+    author = data as Author | null;
+  }
+  if (!author) return null;
+  if (author.canonical) return null;
+  if (author.user_id) return author.user_id;
+
+  // Legacy rows where authors.id equals the auth user id
+  const { data: legacyUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', author.id)
+    .maybeSingle();
+  if (legacyUser) return author.id;
+
+  return null;
+};
+
 export const getAuthorById = async (authorId: string): Promise<Author | null> => {
   const { data, error } = await supabase
     .from('authors')

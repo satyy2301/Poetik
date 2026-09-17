@@ -16,6 +16,8 @@ import { searchPoems, incrementPoemLikes } from '../services/poemService';
 import { searchAuthors } from '../services/authorService';
 import { Poem } from '../types/poem';
 import { Author } from '../types/author';
+import { openAuthorProfile, openPoemDetail, openUserProfile } from '../navigation/navigationHelpers';
+import { useAuth } from '../context/AuthContext';
 
 type SearchResult =
   | { id: string; type: 'poem'; data: Poem }
@@ -24,6 +26,7 @@ type SearchResult =
 
 const SearchScreen = () => {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const colors = theme.colors;
   const [searchQuery, setSearchQuery] = useState('');
@@ -98,15 +101,15 @@ const SearchScreen = () => {
   };
 
   const handlePoemPress = (poem: Poem) => {
-    navigation.navigate('PoemDetail', { poem });
+    openPoemDetail(navigation, poem);
   };
 
   const handleAuthorPress = (author: Author) => {
-    navigation.navigate('AuthorProfile', { author });
+    openAuthorProfile(navigation, author);
   };
 
-  const handleUserPress = (user: Author) => {
-    navigation.navigate('Profile', { user });
+  const handleUserPress = (author: Author) => {
+    openUserProfile(navigation, author.id, user?.id);
   };
 
   const handlePoemLike = async (poemId: string) => {

@@ -12,6 +12,7 @@ import {
   getNotificationPreferences,
   updateNotificationPreferences,
 } from '../services/notificationService';
+import { openAuthorProfile, openChat } from '../navigation/navigationHelpers';
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   follow: 'person-add',
@@ -56,10 +57,14 @@ const NotificationsScreen = ({ navigation }: any) => {
       setNotifications((prev) => prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)));
       await refreshUnread();
     }
-    if (notif.type === 'message') navigation.navigate('MainTabs', { screen: 'Messages' });
+    if (notif.type === 'message') {
+      const senderId = (notif.data as any)?.sender_id;
+      if (senderId) openChat(navigation, senderId);
+      else navigation.navigate('App', { screen: 'MainTabs', params: { screen: 'Messages' } });
+    }
     if (notif.type === 'follow') {
       const followerId = (notif.data as any)?.follower_id;
-      if (followerId) navigation.navigate('Profile', { user: { id: followerId } });
+      if (followerId) openAuthorProfile(navigation, followerId);
     }
   };
 

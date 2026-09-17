@@ -1,9 +1,11 @@
 import { supabase } from '../lib/supabase';
+import { resolveAuthorAccountId } from './authorService';
 
 export type FollowUser = {
   id: string;
   name: string;
   bio?: string;
+  avatar_url?: string;
 };
 
 export const isFollowing = async (followerId: string, followeeId: string) => {
@@ -14,6 +16,12 @@ export const isFollowing = async (followerId: string, followeeId: string) => {
     .eq('followee_id', followeeId)
     .maybeSingle();
   return !!data;
+};
+
+export const isFollowingAuthor = async (followerId: string, authorId: string) => {
+  const accountId = await resolveAuthorAccountId(authorId);
+  if (!accountId) return false;
+  return isFollowing(followerId, accountId);
 };
 
 export const followUser = async (followerId: string, followeeId: string) => {
@@ -42,6 +50,12 @@ export const toggleFollow = async (followerId: string, followeeId: string) => {
   return true;
 };
 
+export const toggleFollowAuthor = async (followerId: string, authorId: string) => {
+  const accountId = await resolveAuthorAccountId(authorId);
+  if (!accountId) throw new Error('Cannot follow this author');
+  return toggleFollow(followerId, accountId);
+};
+
 export const getFollowCounts = async (userId: string) => {
   const [{ count: followers }, { count: following }] = await Promise.all([
     supabase.from('followers').select('*', { count: 'exact', head: true }).eq('followee_id', userId),
@@ -50,14 +64,25 @@ export const getFollowCounts = async (userId: string) => {
   return { followers: followers || 0, following: following || 0 };
 };
 
-const resolveAuthors = async (ids: string[]): Promise<FollowUser[]> => {
-  if (!ids.length) return [];
-  const { data } = await supabase.from('authors').select('id, name, bio').in('id', ids);
-  const map = new Map((data || []).map((a) => [a.id, a]));
-  return ids.map((id) => ({
+const resolveAuthors = async (accountIds: string[]): Promise<FollowUser[]> => {
+  if (!accountIds.length) return [];
+  const { data } = await supabase
+    .from('authors')
+    .select('id, user_id, name, bio, avatar_url')
+    .or(`id.in.(${accountIds.join(',')}),user_id.in.(${accountIds.join(',')})`);
+
+  const map = new Map<string, { name: string; bio?: string; avatar_url?: string }>();
+  (data || []).forEach((a) => {
+    const entry = { name: a.name, bio: a.bio, avatar_url: a.avatar_url };
+    map.set(a.id, entry);
+    if (a.user_id) map.set(a.user_id, entry);
+  });
+
+  return accountIds.map((id) => ({
     id,
     name: map.get(id)?.name || 'Poet',
     bio: map.get(id)?.bio,
+    avatar_url: map.get(id)?.avatar_url,
   }));
 };
 
@@ -83,15 +108,28 @@ export const getFollowSuggestions = async (userId: string, limit = 10): Promise<
   const followingIds = await getFollowingIds(userId);
   const exclude = [...followingIds, userId];
 
-  let authorQuery = supabase.from('authors').select('id, name, bio').limit(limit);
-  if (exclude.length) authorQuery = authorQuery.not('id', 'in', `(${exclude.join(',')})`);
+  let authorQuery = supabase
+    .from('authors')
+    .select('id, user_id, name, bio, avatar_url')
+    .not('canonical', 'eq', true)
+    .limit(limit);
+  if (exclude.length) {
+    authorQuery = authorQuery.not('user_id', 'in', `(${exclude.join(',')})`);
+  }
   const { data: authors } = await authorQuery;
 
-  if (authors?.length) return authors as FollowUser[];
+  if (authors?.length) {
+    return authors.map((a) => ({
+      id: a.user_id || a.id,
+      name: a.name,
+      bio: a.bio,
+      avatar_url: a.avatar_url,
+    }));
+  }
 
   const { data: popular } = await supabase
     .from('poems')
-    .select('author:authors(id, name, bio)')
+    .select('author:authors(id, user_id, name, bio, avatar_url)')
     .eq('visibility', 'public')
     .order('like_count', { ascending: false })
     .limit(20);
@@ -100,9 +138,15 @@ export const getFollowSuggestions = async (userId: string, limit = 10): Promise<
   const suggestions: FollowUser[] = [];
   (popular || []).forEach((row: any) => {
     const author = row.author;
-    if (author?.id && !seen.has(author.id)) {
-      seen.add(author.id);
-      suggestions.push({ id: author.id, name: author.name, bio: author.bio });
+    const accountId = author?.user_id || author?.id;
+    if (accountId && !seen.has(accountId)) {
+      seen.add(accountId);
+      suggestions.push({
+        id: accountId,
+        name: author.name,
+        bio: author.bio,
+        avatar_url: author.avatar_url,
+      });
     }
   });
   return suggestions.slice(0, limit);

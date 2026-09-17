@@ -3,31 +3,44 @@ import { supabase } from '../../lib/supabase';
 const generateSlug = (title: string) =>
   `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}-${Date.now().toString(36)}`;
 
+const PLAYLIST_SELECT = `
+  id,
+  title,
+  description,
+  created_at,
+  is_public,
+  share_slug,
+  follower_count,
+  play_count,
+  playlist_poems(
+    poem:poems(
+      id,
+      title,
+      content,
+      themes,
+      form,
+      like_count,
+      author:authors(id, name)
+    )
+  )
+`;
+
+export const getPlaylistById = async (playlistId: string) => {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select(PLAYLIST_SELECT)
+    .eq('id', playlistId)
+    .single();
+
+  if (error) throw error;
+  return data;
+};
+
 export const getUserPlaylists = async (userId: string) => {
   try {
     const { data, error } = await supabase
       .from('playlists')
-      .select(`
-        id,
-        title,
-        description,
-        created_at,
-        is_public,
-        share_slug,
-        follower_count,
-        play_count,
-        playlist_poems(
-          poem:poems(
-            id,
-            title,
-            content,
-            themes,
-            form,
-            like_count,
-            author:authors(id, name)
-          )
-        )
-      `)
+      .select(PLAYLIST_SELECT)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
@@ -70,7 +83,7 @@ export const addPoemToPlaylist = async (playlistId: string, poemId: string) => {
       .select('id')
       .eq('playlist_id', playlistId)
       .eq('poem_id', poemId)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return { data: null, error: new Error('Poem already in playlist') };

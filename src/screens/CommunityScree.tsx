@@ -7,10 +7,12 @@ import PoemCard from '../components/PoemCard';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
+import { addFavoritePoem } from '../features/favorites/favoritesService';
 
 const CommunityScreen = () => {
   const { user } = useAuth();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [posts, setPosts] = useState<any[]>([]);
   const [userPoems, setUserPoems] = useState<any[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
@@ -142,11 +144,11 @@ const CommunityScreen = () => {
   };
 
   const handlePoemPress = (poem: any) => {
-    navigation.navigate('PoemDetail', { poem });
+    openPoemDetail(navigation, poem);
   };
 
   const handleAuthorPress = (author: any) => {
-    navigation.navigate('Profile', { user: author });
+    openAuthorProfile(navigation, author);
   };
 
   const handlePoemLike = async (poemId: string) => {
@@ -156,16 +158,7 @@ const CommunityScreen = () => {
     }
 
     try {
-      // Add to favorites when liked
-      await supabase
-        .from('favorites')
-        .upsert([{
-          user_id: user.id,
-          poem_id: poemId,
-          created_at: new Date().toISOString()
-        }], {
-          onConflict: 'user_id,poem_id'
-        });
+      await addFavoritePoem(user.id, poemId);
 
       // Increment like count
       await supabase.rpc('increment_likes', { poem_id: poemId });

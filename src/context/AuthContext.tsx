@@ -85,13 +85,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .single();
 
         if (!existingAuthor) {
-          await supabase
+          const { data: byUserId } = await supabase
             .from('authors')
-            .insert([{
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+          if (!byUserId) {
+            await supabase.from('authors').insert([{
               id: currentUser.id,
-              name: currentUser.email?.split('@')[0] || 'Unknown User',
+              user_id: currentUser.id,
+              name: currentUser.user_metadata?.username
+                || currentUser.email?.split('@')[0]
+                || 'Unknown User',
+              canonical: false,
               created_at: new Date().toISOString(),
             }]);
+          }
+        } else {
+          await supabase
+            .from('authors')
+            .update({ user_id: currentUser.id })
+            .eq('id', currentUser.id)
+            .is('user_id', null);
         }
       }
 

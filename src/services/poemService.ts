@@ -29,6 +29,17 @@ const normalizeAuthor = (poem: any): Poem => ({
   author: poem.author || { id: poem.author_id, name: 'Unknown Author' },
 });
 
+export const getPoemById = async (poemId: string): Promise<Poem | null> => {
+  const { data, error } = await supabase
+    .from('poems')
+    .select(POEM_SELECT)
+    .eq('id', poemId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? normalizeAuthor(data) : null;
+};
+
 export const fetchPoems = async ({
   limit = DEFAULT_LIMIT,
   page = 0,

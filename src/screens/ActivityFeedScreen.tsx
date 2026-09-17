@@ -11,6 +11,7 @@ import {
   activityLabel,
   ActivityEvent,
 } from '../services/activityService';
+import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 
 type FeedFilter = 'own' | 'friends' | 'all';
 
@@ -45,10 +46,16 @@ const ActivityFeedScreen = () => {
 
   const handlePress = (event: ActivityEvent) => {
     if (event.event_type === 'followed' && event.target_id) {
-      navigation.navigate('Profile', { user: { id: event.target_id } });
+      openAuthorProfile(navigation, event.target_id);
     }
     if (event.event_type === 'published' && event.target_id) {
-      navigation.navigate('PoemDetail', { poem: { id: event.target_id } });
+      openPoemDetail(navigation, event.target_id);
+    }
+    if (event.event_type === 'liked' && event.target_id) {
+      openPoemDetail(navigation, event.target_id);
+    }
+    if (event.event_type === 'shared_playlist' && event.target_id) {
+      navigation.navigate('PublicPlaylist', { slug: (event.metadata as any)?.share_slug });
     }
   };
 

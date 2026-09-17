@@ -1,15 +1,19 @@
 // src/screens/PlaylistScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert, Pressable } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { getUserPlaylists, createPlaylist, deletePlaylist, setPlaylistPublic } from '../features/playlists/playlistService';
 import { Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { openPlaylistDetail } from '../navigation/navigationHelpers';
 
 const PlaylistScreen = () => {
   const { user } = useAuth();
-  const navigation = useNavigation();
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const navigation = useNavigation<any>();
   const [playlists, setPlaylists] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,7 +27,7 @@ const PlaylistScreen = () => {
 
   const loadPlaylists = async () => {
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       const { data } = await getUserPlaylists(user.id);
@@ -44,18 +48,16 @@ const PlaylistScreen = () => {
     setIsCreating(true);
     try {
       const { data, error } = await createPlaylist(user.id, newPlaylistTitle, newPlaylistDescription);
-      
+
       if (error) {
         Alert.alert('Error', 'Failed to create playlist');
         return;
       }
 
-      setPlaylists(prev => [data, ...prev]);
+      setPlaylists((prev) => [data, ...prev]);
       setNewPlaylistTitle('');
       setNewPlaylistDescription('');
       setShowCreateModal(false);
-      
-      Alert.alert('Success', 'Playlist created successfully!');
     } catch (error) {
       console.error('Error creating playlist:', error);
       Alert.alert('Error', 'Failed to create playlist');
@@ -70,35 +72,27 @@ const PlaylistScreen = () => {
       `Are you sure you want to delete "${title}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
               await deletePlaylist(playlistId);
-              setPlaylists(prev => prev.filter(p => p.id !== playlistId));
-              Alert.alert('Success', 'Playlist deleted successfully');
+              setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
             } catch (error) {
               console.error('Error deleting playlist:', error);
               Alert.alert('Error', 'Failed to delete playlist');
             }
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
-  };
-
-  const handlePlaylistPress = (playlist: any) => {
-    navigation.navigate('PlaylistDetail', { playlist });
   };
 
   const handleTogglePublic = async (playlist: any) => {
     try {
       const { data } = await setPlaylistPublic(playlist.id, !playlist.is_public, playlist.title);
       setPlaylists((prev) => prev.map((p) => (p.id === playlist.id ? { ...p, ...data } : p)));
-      if (data?.is_public) {
-        Alert.alert('Public', `Share link: poetik.app/playlist/${data.share_slug}`);
-      }
     } catch {
       Alert.alert('Error', 'Could not update playlist visibility');
     }
@@ -109,30 +103,39 @@ const PlaylistScreen = () => {
       Alert.alert('Make public first', 'Toggle public to generate a share link.');
       return;
     }
-    await Share.share({ message: `Check out my playlist: ${playlist.title}\nhttps://poetik.app/playlist/${playlist.share_slug}` });
+    await Share.share({
+      message: `Check out my playlist: ${playlist.title}\nhttps://poetik.app/playlist/${playlist.share_slug}`,
+    });
   };
 
-  const renderPlaylistItem = ({ item: playlist }) => {
+  const renderPlaylistItem = ({ item: playlist }: { item: any }) => {
     const poemCount = playlist.playlist_poems?.length || 0;
-    
+
     return (
-      <TouchableOpacity
-        style={styles.playlistCard}
-        onPress={() => handlePlaylistPress(playlist)}
-      >
-        <View style={styles.playlistInfo}>
-          <Text style={styles.playlistTitle}>{playlist.title}</Text>
+      <View style={[styles.playlistCard, { backgroundColor: colors.surface }]}>
+        <Pressable
+          style={styles.playlistInfo}
+          onPress={() => openPlaylistDetail(navigation, playlist)}
+        >
+          <Text style={[styles.playlistTitle, { color: colors.text }]}>{playlist.title}</Text>
           {playlist.description && (
-            <Text style={styles.playlistDescription}>{playlist.description}</Text>
+            <Text style={[styles.playlistDescription, { color: colors.textSecondary }]}>
+              {playlist.description}
+            </Text>
           )}
-          <Text style={styles.playlistMeta}>
+          <Text style={[styles.playlistMeta, { color: colors.textSecondary }]}>
             {poemCount} {poemCount === 1 ? 'poem' : 'poems'}
+            {playlist.is_public ? ' · Public' : ''}
           </Text>
-        </View>
-        
+        </Pressable>
+
         <View style={styles.playlistActions}>
           <TouchableOpacity style={styles.actionButton} onPress={() => handleTogglePublic(playlist)}>
-            <Ionicons name={playlist.is_public ? 'globe' : 'globe-outline'} size={20} color="#3498db" />
+            <Ionicons
+              name={playlist.is_public ? 'globe' : 'globe-outline'}
+              size={20}
+              color={colors.primary}
+            />
           </TouchableOpacity>
           {playlist.is_public && (
             <TouchableOpacity style={styles.actionButton} onPress={() => handleSharePlaylist(playlist)}>
@@ -145,74 +148,78 @@ const PlaylistScreen = () => {
           >
             <Ionicons name="trash-outline" size={20} color="#e74c3c" />
           </TouchableOpacity>
-          <Ionicons name="chevron-forward" size={20} color="#bdc3c7" />
+          <Pressable onPress={() => openPlaylistDetail(navigation, playlist)} hitSlop={8}>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </Pressable>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#2c3e50" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Playlists</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Playlists</Text>
         <TouchableOpacity
-          style={styles.createButton}
+          style={[styles.createButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowCreateModal(true)}
         >
           <Ionicons name="add" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
-      {/* Playlists List */}
       <FlatList
         data={playlists}
         keyExtractor={(item) => item.id}
         renderItem={renderPlaylistItem}
         contentContainerStyle={styles.listContainer}
+        refreshing={isLoading}
+        onRefresh={loadPlaylists}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="musical-notes-outline" size={64} color="#bdc3c7" />
-            <Text style={styles.emptyTitle}>No Playlists Yet</Text>
-            <Text style={styles.emptySubtitle}>Create your first playlist to organize your favorite poems</Text>
-            <TouchableOpacity
-              style={styles.emptyCreateButton}
-              onPress={() => setShowCreateModal(true)}
-            >
-              <Text style={styles.emptyCreateButtonText}>Create Playlist</Text>
-            </TouchableOpacity>
-          </View>
+          !isLoading ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="musical-notes-outline" size={64} color={colors.textSecondary} />
+              <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No Playlists Yet</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                Create your first playlist to organize your favorite poems
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyCreateButton, { backgroundColor: colors.primary }]}
+                onPress={() => setShowCreateModal(true)}
+              >
+                <Text style={styles.emptyCreateButtonText}>Create Playlist</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
         }
       />
 
-      {/* Create Playlist Modal */}
       <Modal
         visible={showCreateModal}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setShowCreateModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Create New Playlist</Text>
-            
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Create New Playlist</Text>
+
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
               placeholder="Playlist title"
+              placeholderTextColor={colors.textSecondary}
               value={newPlaylistTitle}
               onChangeText={setNewPlaylistTitle}
               maxLength={100}
             />
-            
+
             <TextInput
-              style={[styles.modalInput, styles.descriptionInput]}
+              style={[styles.modalInput, styles.descriptionInput, { color: colors.text, borderColor: colors.border }]}
               placeholder="Description (optional)"
+              placeholderTextColor={colors.textSecondary}
               value={newPlaylistDescription}
               onChangeText={setNewPlaylistDescription}
               multiline
@@ -222,18 +229,18 @@ const PlaylistScreen = () => {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[styles.cancelButton, { backgroundColor: colors.border }]}
                 onPress={() => {
                   setShowCreateModal(false);
                   setNewPlaylistTitle('');
                   setNewPlaylistDescription('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
-                style={[styles.confirmButton, isCreating && styles.confirmButtonDisabled]}
+                style={[styles.confirmButton, { backgroundColor: colors.primary }, isCreating && styles.confirmButtonDisabled]}
                 onPress={handleCreatePlaylist}
                 disabled={isCreating}
               >
@@ -250,111 +257,63 @@ const PlaylistScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
   },
-  backButton: {
-    padding: 8,
-  },
+  backButton: { padding: 8 },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2c3e50',
     flex: 1,
     textAlign: 'center',
   },
   createButton: {
-    backgroundColor: '#3498db',
     width: 40,
     height: 40,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContainer: {
-    padding: 15,
-  },
+  listContainer: { padding: 15 },
   playlistCard: {
-    backgroundColor: 'white',
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 2,
   },
-  playlistInfo: {
-    flex: 1,
-  },
-  playlistTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  playlistDescription: {
-    fontSize: 14,
-    color: '#7f8c8d',
-    marginTop: 4,
-  },
-  playlistMeta: {
-    fontSize: 12,
-    color: '#bdc3c7',
-    marginTop: 8,
-  },
-  playlistActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButton: {
-    padding: 8,
-    marginRight: 8,
-  },
+  playlistInfo: { flex: 1, paddingRight: 8 },
+  playlistTitle: { fontSize: 18, fontWeight: 'bold' },
+  playlistDescription: { fontSize: 14, marginTop: 4 },
+  playlistMeta: { fontSize: 12, marginTop: 8 },
+  playlistActions: { flexDirection: 'row', alignItems: 'center' },
+  actionButton: { padding: 8, marginRight: 4 },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 100,
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#7f8c8d',
-    marginTop: 20,
-  },
+  emptyTitle: { fontSize: 24, fontWeight: 'bold', marginTop: 20 },
   emptySubtitle: {
     fontSize: 16,
-    color: '#bdc3c7',
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 30,
     paddingHorizontal: 40,
   },
   emptyCreateButton: {
-    backgroundColor: '#3498db',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 25,
   },
-  emptyCreateButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  // Modal styles
+  emptyCreateButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -362,7 +321,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,
     width: '90%',
@@ -371,53 +329,22 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2c3e50',
     textAlign: 'center',
     marginBottom: 20,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#e9ecef',
     borderRadius: 10,
     padding: 12,
     marginBottom: 15,
     fontSize: 16,
   },
-  descriptionInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    gap: 10,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#e9ecef',
-    padding: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#6c757d',
-    fontWeight: '600',
-  },
-  confirmButton: {
-    flex: 1,
-    backgroundColor: '#3498db',
-    padding: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
+  descriptionInput: { minHeight: 80, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 10 },
+  cancelButton: { flex: 1, padding: 12, borderRadius: 25, alignItems: 'center' },
+  confirmButton: { flex: 1, padding: 12, borderRadius: 25, alignItems: 'center' },
+  confirmButtonDisabled: { opacity: 0.6 },
+  confirmButtonText: { color: 'white', fontWeight: '600' },
 });
 
 export default PlaylistScreen;

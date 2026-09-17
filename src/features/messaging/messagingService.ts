@@ -25,16 +25,20 @@ export const sendMessage = async (
   content: string,
   options?: { messageType?: MessageType; imageUrl?: string; poemId?: string },
 ) => {
-  return supabase.from('messages').insert([
-    {
-      sender_id: senderId,
-      receiver_id: receiverId,
-      content,
-      message_type: options?.messageType || 'text',
-      image_url: options?.imageUrl,
-      poem_id: options?.poemId,
-    },
-  ]);
+  return supabase
+    .from('messages')
+    .insert([
+      {
+        sender_id: senderId,
+        receiver_id: receiverId,
+        content,
+        message_type: options?.messageType || 'text',
+        image_url: options?.imageUrl,
+        poem_id: options?.poemId,
+      },
+    ])
+    .select()
+    .single();
 };
 
 export const sendPoemShare = async (

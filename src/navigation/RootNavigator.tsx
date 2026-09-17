@@ -8,6 +8,7 @@ import SignupScreen from '../screens/SignupScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import PoemScreen from '../screens/PoemScreen';
 import PlaylistScreen from '../screens/PlaylistScreen';
+import PlaylistDetailScreen from '../screens/PlaylistDetailScreen';
 import AuthorProfileScreen from '../screens/AuthorProfileScreen';
 import FollowersScreen from '../screens/FollowersScreen';
 import FollowingScreen from '../screens/FollowingScreen';
@@ -34,6 +35,7 @@ const RootNavigator = () => {
             <Stack.Screen name="App" component={AppNavigator} />
             <Stack.Screen name="PoemDetail" component={PoemScreen} />
             <Stack.Screen name="Playlists" component={PlaylistScreen} />
+            <Stack.Screen name="PlaylistDetail" component={PlaylistDetailScreen} />
             <Stack.Screen name="AuthorProfile" component={AuthorProfileScreen} />
             <Stack.Screen name="Followers" component={FollowersScreen} options={{ title: 'Followers' }} />
             <Stack.Screen name="Following" component={FollowingScreen} options={{ title: 'Following' }} />

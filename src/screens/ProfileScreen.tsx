@@ -4,14 +4,16 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Switch } fro
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
-import { toggleFollow, getUserFollowers, getUserFollowing } from '../features/follow/followService';
-import { getUserFavorites } from '../features/favorites/favoritesService';
+import { toggleFollowAuthor, isFollowingAuthor } from '../features/follow/followService';
+import { resolveAuthorAccountId } from '../services/authorService';
+import { getUserFavorites, addFavoritePoem } from '../features/favorites/favoritesService';
 import { getUserPlaylists } from '../features/playlists/playlistService';
 import PoemCard from '../components/PoemCard';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { fetchUserAchievements } from '../services/achievementService';
 import { UserAchievement } from '../types/achievement';
+import { openAuthorProfile, openPlaylistDetail, openPoemDetail } from '../navigation/navigationHelpers';
 
 const ProfileScreen = ({ route }) => {
   const { user: currentUser, logout } = useAuth();
@@ -33,16 +35,11 @@ const ProfileScreen = ({ route }) => {
   }, [user]);
 
   const loadProfileData = async () => {
-    // Check if current user follows this profile
     if (currentUser?.id && user?.id !== currentUser?.id) {
-      const { data } = await supabase
-        .from('followers')
-        .select()
-        .eq('follower_id', currentUser.id)
-        .eq('followee_id', user.id)
-        .single();
-      
-      setIsFollowing(!!data);
+      const accountId = await resolveAuthorAccountId(user.id);
+      if (accountId) {
+        setIsFollowing(await isFollowingAuthor(currentUser.id, user.id));
+      }
     }
 
     // Get follower counts
@@ -98,14 +95,18 @@ const ProfileScreen = ({ route }) => {
 
   const handleFollowToggle = async () => {
     if (!currentUser) return;
-    
-    await toggleFollow(currentUser.id, user.id);
-    setIsFollowing(!isFollowing);
-    setFollowersCount(prev => isFollowing ? prev - 1 : prev + 1);
+    try {
+      const nowFollowing = await toggleFollowAuthor(currentUser.id, user.id);
+      setIsFollowing(nowFollowing);
+      setFollowersCount((prev) => (nowFollowing ? prev + 1 : prev - 1));
+    } catch (error) {
+      console.error('Follow toggle failed:', error);
+      Alert.alert('Error', 'Could not update follow status. Please try again.');
+    }
   };
 
   const handleViewPoem = (poem: any) => {
-    navigation.navigate('PoemDetail', { poem });
+    openPoemDetail(navigation, poem);
   };
 
   const handleLike = async (poemId: string) => {
@@ -120,18 +121,13 @@ const ProfileScreen = ({ route }) => {
     setUserPoems(updatedPoems);
 
     await supabase.rpc('increment_likes', { poem_id: poemId });
-    
-    // Add to favorites when liked
+
     if (currentUser) {
-      await supabase
-        .from('favorites')
-        .upsert([{
-          user_id: currentUser.id,
-          poem_id: poemId,
-          created_at: new Date().toISOString()
-        }], {
-          onConflict: 'user_id,poem_id'
-        });
+      try {
+        await addFavoritePoem(currentUser.id, poemId);
+      } catch (error) {
+        console.error('Failed to save favorite:', error);
+      }
     }
   };
 
@@ -322,7 +318,7 @@ const ProfileScreen = ({ route }) => {
             <PoemCard 
               poem={item} 
               onPress={() => handleViewPoem(item)}
-              onAuthorPress={() => {}} // No action needed since we're on profile
+              onAuthorPress={() => openAuthorProfile(navigation, user.id)}
               onLike={() => handleLike(item.id)}
             />
           )}
@@ -342,26 +338,49 @@ const ProfileScreen = ({ route }) => {
       {activeTab === 'playlists' && (
         <FlatList
           data={playlists}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.playlistItem}>
-              <Text style={styles.playlistTitle}>{item.title}</Text>
-              <Text style={styles.playlistCount}>
-                {item.playlist_poems?.length || 0} poems
-              </Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.playlistItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => openPlaylistDetail(navigation, item)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.playlistTitle, { color: colors.text }]}>{item.title}</Text>
+                <Text style={[styles.playlistCount, { color: colors.textSecondary }]}>
+                  {item.playlist_poems?.length || 0} poems
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           )}
+          ListEmptyComponent={
+            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+              No playlists yet
+            </Text>
+          }
         />
       )}
-      
+
       {activeTab === 'favorites' && (
         <FlatList
           data={favorites.poems}
+          keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.poemItem}>
-              <Text style={styles.poemTitle}>{item.title}</Text>
-              <Text style={styles.poemAuthor}>by @{item.author?.username}</Text>
-            </View>
+            <TouchableOpacity
+              style={[styles.poemItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => openPoemDetail(navigation, item)}
+            >
+              <Text style={[styles.poemTitle, { color: colors.text }]}>{item.title}</Text>
+              <Text style={[styles.poemAuthor, { color: colors.textSecondary }]}>
+                by {item.author?.name || 'Unknown'}
+              </Text>
+            </TouchableOpacity>
           )}
+          ListEmptyComponent={
+            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+              No favorites yet
+            </Text>
+          }
         />
       )}
     </View>
@@ -507,10 +526,14 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   playlistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
-    backgroundColor: 'white',
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   playlistTitle: {
     fontSize: 16,
@@ -523,8 +546,10 @@ const styles = StyleSheet.create({
   poemItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
-    backgroundColor: 'white',
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   poemTitle: {
     fontSize: 16,

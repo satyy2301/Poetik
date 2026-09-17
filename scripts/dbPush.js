@@ -4,7 +4,7 @@ require('dotenv').config();
 const { execSync } = require('child_process');
 
 const projectRef = 'ymwoglwtrjuvspfvdopn';
-const password = process.env.SUPABASE_DB_PASSWORD;
+const password = process.env.SUPABASE_DB_PASSWORD?.replace(/^["']|["']$/g, '');
 
 const run = (cmd) => execSync(cmd, { stdio: 'inherit', env: process.env });
 

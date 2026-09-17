@@ -13,6 +13,7 @@ import {
   fetchWeeklyDigest,
 } from '../services/discoveryService';
 import { incrementPoemLikes } from '../services/poemService';
+import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 
 const DiscoverScreen = () => {
   const navigation = useNavigation<any>();
@@ -75,8 +76,8 @@ const DiscoverScreen = () => {
         <View style={styles.section}>
           <PoemCard
             poem={randomPoem}
-            onPress={() => navigation.navigate('PoemDetail', { poem: randomPoem })}
-            onAuthorPress={() => navigation.navigate('AuthorProfile', { author: randomPoem.author })}
+            onPress={() => openPoemDetail(navigation, randomPoem)}
+            onAuthorPress={() => openAuthorProfile(navigation, randomPoem.author)}
             onLike={() => handleLike(randomPoem.id)}
           />
         </View>
@@ -87,8 +88,8 @@ const DiscoverScreen = () => {
         <PoemCard
           key={poem.id}
           poem={poem}
-          onPress={() => navigation.navigate('PoemDetail', { poem })}
-          onAuthorPress={() => navigation.navigate('AuthorProfile', { author: poem.author })}
+          onPress={() => openPoemDetail(navigation, poem)}
+          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
           onLike={() => handleLike(poem.id)}
         />
       ))}
@@ -98,8 +99,8 @@ const DiscoverScreen = () => {
         <PoemCard
           key={`pick-${poem.id}`}
           poem={poem}
-          onPress={() => navigation.navigate('PoemDetail', { poem })}
-          onAuthorPress={() => navigation.navigate('AuthorProfile', { author: poem.author })}
+          onPress={() => openPoemDetail(navigation, poem)}
+          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
           onLike={() => handleLike(poem.id)}
         />
       ))}
@@ -109,8 +110,8 @@ const DiscoverScreen = () => {
         <PoemCard
           key={`digest-${poem.id}`}
           poem={poem}
-          onPress={() => navigation.navigate('PoemDetail', { poem })}
-          onAuthorPress={() => navigation.navigate('AuthorProfile', { author: poem.author })}
+          onPress={() => openPoemDetail(navigation, poem)}
+          onAuthorPress={() => openAuthorProfile(navigation, poem.author)}
           onLike={() => handleLike(poem.id)}
         />
       ))}
@@ -121,7 +122,7 @@ const DiscoverScreen = () => {
           <TouchableOpacity
             key={author.id}
             style={styles.authorChip}
-            onPress={() => navigation.navigate('AuthorProfile', { author })}
+            onPress={() => openAuthorProfile(navigation, author)}
           >
             <Text style={styles.authorName}>{author.name}</Text>
           </TouchableOpacity>

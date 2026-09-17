@@ -18,6 +18,7 @@ import {
   LeaderboardEntry,
   LeaderboardPeriod,
 } from '../services/leaderboardService';
+import { openUserProfile } from '../navigation/navigationHelpers';
 
 const PERIODS: { key: LeaderboardPeriod; label: string }[] = [
   { key: 'weekly', label: 'Week' },
@@ -129,9 +130,7 @@ const LeaderboardScreen = () => {
           return (
             <TouchableOpacity
               style={[styles.row, isMe && styles.rowMe]}
-              onPress={() =>
-                navigation.navigate('Profile', { user: { id: item.user_id, email: item.display_name } })
-              }
+              onPress={() => openUserProfile(navigation, item.user_id, user?.id)}
             >
               <Text style={styles.rank}>
                 {medal || `#${item.rank}`}
