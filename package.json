@@ -8,6 +8,9 @@
     "lint": "eslint .",
     "start": "expo start",
     "test": "jest",
+    "ingest:poems": "node scripts/ingestPoems.js",
+    "seed:challenges": "node scripts/seedChallenges.js",
+    "db:push": "node scripts/dbPush.js",
     "build": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res"
   },
   "dependencies": {

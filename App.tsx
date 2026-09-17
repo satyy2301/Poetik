@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
@@ -8,8 +9,21 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { useFonts } from 'expo-font';
 import { ActivityIndicator, View } from 'react-native';
 import { ProgressProvider } from './src/context/ProgressContext';
+import { NotificationProvider } from './src/context/NotificationContext';
+import { initAnalytics } from './src/utils/analytics';
+import { initErrorTracking } from './src/utils/errorTracking';
+import Constants from 'expo-constants';
+
+const extra = Constants.expoConfig?.extra || {};
 
 export default function App() {
+  useEffect(() => {
+    initErrorTracking({ sentryDsn: extra.sentryDsn as string | undefined });
+    initAnalytics({
+      enabled: !__DEV__,
+      posthogKey: extra.posthogKey as string | undefined,
+    });
+  }, []);
   const [fontsLoaded] = useFonts({
     'Inter-Regular': require('./assets/fonts/Inter-Regular.ttf'),
     'Inter-Bold': require('./assets/fonts/Inter-Bold.ttf'),
@@ -32,8 +46,10 @@ export default function App() {
           <AuthProvider>
             <UserProvider>
               <ProgressProvider>
-                <StatusBar style="auto" />
-                <RootNavigator />
+                <NotificationProvider>
+                  <StatusBar style="auto" />
+                  <RootNavigator />
+                </NotificationProvider>
               </ProgressProvider>
             </UserProvider>
           </AuthProvider>

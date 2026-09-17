@@ -1,34 +1,36 @@
-// src/screens/SearchScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  FlatList, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
   StyleSheet,
-  ActivityIndicator 
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../lib/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import PoemCard from '../components/PoemCard';
+import { searchPoems, incrementPoemLikes } from '../services/poemService';
+import { searchAuthors } from '../services/authorService';
+import { Poem } from '../types/poem';
+import { Author } from '../types/author';
 
-interface SearchResult {
-  id: string;
-  type: 'poem' | 'author' | 'user';
-  data: any;
-}
+type SearchResult =
+  | { id: string; type: 'poem'; data: Poem }
+  | { id: string; type: 'author'; data: Author & { poems?: { count: number }[] } }
+  | { id: string; type: 'user'; data: Author & { poems?: { count: number }[] } };
 
 const SearchScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { theme } = useTheme();
   const colors = theme.colors;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'poems' | 'authors' | 'users'>('all');
+  const [poemFormFilter, setPoemFormFilter] = useState<string | null>(null);
 
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
@@ -40,81 +42,51 @@ const SearchScreen = () => {
     }, 300);
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery, activeFilter, poemFormFilter]);
 
   const performSearch = async () => {
     setIsLoading(true);
-    
+
     try {
-      let results: SearchResult[] = [];
+      const results: SearchResult[] = [];
+      const query = searchQuery.trim();
 
       if (activeFilter === 'all' || activeFilter === 'poems') {
-        // Search poems by title and content
-        const { data: poems } = await supabase
-          .from('poems')
-          .select(`
-            id,
-            title,
-            content,
-            themes,
-            form,
-            like_count,
-            created_at,
-            author:authors!inner(id, name)
-          `)
-          .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%,themes.cs.{${searchQuery}}`)
-          .order('created_at', { ascending: false })
-          .limit(10);
+        const poems = await searchPoems({
+          query,
+          form: poemFormFilter,
+          limit: 15,
+        });
 
-        if (poems) {
-          results.push(...poems.map(poem => ({
+        results.push(
+          ...poems.map((poem) => ({
             id: `poem-${poem.id}`,
             type: 'poem' as const,
-            data: poem
-          })));
-        }
+            data: poem,
+          })),
+        );
       }
 
       if (activeFilter === 'all' || activeFilter === 'authors') {
-        // Search authors by name
-        const { data: authors } = await supabase
-          .from('authors')
-          .select(`
-            id,
-            name,
-            poems(count)
-          `)
-          .ilike('name', `%${searchQuery}%`)
-          .limit(10);
-
-        if (authors) {
-          results.push(...authors.map(author => ({
+        const authors = await searchAuthors(query, 10);
+        results.push(
+          ...authors.map((author) => ({
             id: `author-${author.id}`,
             type: 'author' as const,
-            data: author
-          })));
-        }
+            data: author as Author & { poems?: { count: number }[] },
+          })),
+        );
       }
 
       if (activeFilter === 'all' || activeFilter === 'users') {
-        // Search users by email/username
-        const { data: users } = await supabase
-          .from('authors')
-          .select(`
-            id,
-            name,
-            poems(count)
-          `)
-          .ilike('name', `%${searchQuery}%`)
-          .limit(10);
-
-        if (users) {
-          results.push(...users.map(user => ({
+        const users = await searchAuthors(query, 10);
+        results.push(
+          ...users.map((user) => ({
             id: `user-${user.id}`,
             type: 'user' as const,
-            data: user
-          })));
-        }
+            data: user as Author & { poems?: { count: number }[] },
+          })),
+        );
       }
 
       setSearchResults(results);
@@ -125,36 +97,34 @@ const SearchScreen = () => {
     }
   };
 
-  const handlePoemPress = (poem: any) => {
+  const handlePoemPress = (poem: Poem) => {
     navigation.navigate('PoemDetail', { poem });
   };
 
-  const handleAuthorPress = (author: any) => {
+  const handleAuthorPress = (author: Author) => {
     navigation.navigate('AuthorProfile', { author });
   };
 
-  const handleUserPress = (user: any) => {
+  const handleUserPress = (user: Author) => {
     navigation.navigate('Profile', { user });
   };
 
   const handlePoemLike = async (poemId: string) => {
     try {
-      await supabase.rpc('increment_likes', { poem_id: poemId });
-      
-      // Update local state
-      setSearchResults(prev => 
-        prev.map(result => {
+      await incrementPoemLikes(poemId);
+      setSearchResults((prev) =>
+        prev.map((result) => {
           if (result.type === 'poem' && result.data.id === poemId) {
             return {
               ...result,
               data: {
                 ...result.data,
-                like_count: (result.data.like_count || 0) + 1
-              }
+                like_count: (result.data.like_count || 0) + 1,
+              },
             };
           }
           return result;
-        })
+        }),
       );
     } catch (error) {
       console.error('Error liking poem:', error);
@@ -167,37 +137,41 @@ const SearchScreen = () => {
         <PoemCard
           poem={item.data}
           onPress={() => handlePoemPress(item.data)}
-          onAuthorPress={() => handleAuthorPress(item.data.author)}
+          onAuthorPress={() => handleAuthorPress(item.data.author as Author)}
           onLike={() => handlePoemLike(item.data.id)}
         />
       );
     }
 
-    if (item.type === 'author' || item.type === 'user') {
-      return (
-        <TouchableOpacity
-          style={[styles.authorResult, { backgroundColor: colors.surface }]}
-          onPress={() => item.type === 'author' ? handleAuthorPress(item.data) : handleUserPress(item.data)}
-        >
-          <View style={styles.authorInfo}>
-            <Text style={[styles.authorName, { color: colors.text }]}>{item.data.name}</Text>
-            <Text style={[styles.authorMeta, { color: colors.textSecondary }]}>
-              {item.data.poems?.[0]?.count || 0} poems
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      );
-    }
-
-    return null;
+    return (
+      <TouchableOpacity
+        style={[styles.authorResult, { backgroundColor: colors.surface }]}
+        onPress={() =>
+          item.type === 'author'
+            ? handleAuthorPress(item.data)
+            : handleUserPress(item.data)
+        }
+      >
+        <View style={styles.authorInfo}>
+          <Text style={[styles.authorName, { color: colors.text }]}>{item.data.name}</Text>
+          <Text style={[styles.authorMeta, { color: colors.textSecondary }]}>
+            {(item.data as any).poems?.[0]?.count || 0} poems
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Search Input */}
       <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
-        <View style={[styles.searchInputContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchInputContainer,
+            { backgroundColor: colors.background, borderColor: colors.border },
+          ]}
+        >
           <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -215,28 +189,60 @@ const SearchScreen = () => {
         </View>
       </View>
 
-      {/* Filter Tabs */}
-      <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.filterContainer,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         {(['all', 'poems', 'authors', 'users'] as const).map((filter) => (
           <TouchableOpacity
             key={filter}
             style={[
               styles.filterTab,
-              activeFilter === filter && { backgroundColor: colors.primary + '15', borderBottomColor: colors.primary }
+              activeFilter === filter && {
+                backgroundColor: colors.primary + '15',
+                borderBottomColor: colors.primary,
+              },
             ]}
             onPress={() => setActiveFilter(filter)}
           >
-            <Text style={[
-              styles.filterTabText,
-              { color: activeFilter === filter ? colors.primary : colors.textSecondary }
-            ]}>
+            <Text
+              style={[
+                styles.filterTabText,
+                { color: activeFilter === filter ? colors.primary : colors.textSecondary },
+              ]}
+            >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Search Results */}
+      {(activeFilter === 'all' || activeFilter === 'poems') && (
+        <View style={styles.poemFiltersRow}>
+          {['Sonnet', 'Haiku', 'Free Verse', null].map((form) => (
+            <TouchableOpacity
+              key={form || 'all'}
+              style={[
+                styles.formChip,
+                poemFormFilter === form && styles.formChipActive,
+              ]}
+              onPress={() => setPoemFormFilter(form)}
+            >
+              <Text
+                style={[
+                  styles.formChipText,
+                  poemFormFilter === form && styles.formChipTextActive,
+                ]}
+              >
+                {form || 'All forms'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -252,14 +258,16 @@ const SearchScreen = () => {
             searchQuery.trim() ? (
               <View style={styles.emptyContainer}>
                 <Ionicons name="search" size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No results found</Text>
-                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Try adjusting your search terms</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  No results found
+                </Text>
               </View>
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="search" size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.text }]}>Search for poems, authors, or users</Text>
-                <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Discover amazing poetry and connect with poets</Text>
+                <Text style={[styles.emptyText, { color: colors.text }]}>
+                  Search for poems, authors, or users
+                </Text>
               </View>
             )
           }
@@ -270,13 +278,8 @@ const SearchScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  searchContainer: {
-    padding: 15,
-    borderBottomWidth: 1,
-  },
+  container: { flex: 1 },
+  searchContainer: { padding: 15, borderBottomWidth: 1 },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -285,14 +288,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
   },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-  },
+  searchIcon: { marginRight: 10 },
+  searchInput: { flex: 1, fontSize: 16, fontFamily: 'Inter-Regular' },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 15,
@@ -307,23 +304,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  filterTabText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
+  filterTabText: { fontSize: 14, fontFamily: 'Inter-Bold' },
+  poemFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  formChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#ecf0f1',
   },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-  },
-  resultsContainer: {
-    paddingTop: 10,
-  },
+  formChipActive: { backgroundColor: '#3498db' },
+  formChipText: { fontSize: 12, color: '#636e72' },
+  formChipTextActive: { color: 'white', fontWeight: '600' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 16, fontFamily: 'Inter-Regular' },
+  resultsContainer: { paddingTop: 10 },
   authorResult: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -332,41 +332,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     marginBottom: 10,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
   },
-  authorInfo: {
-    flex: 1,
-  },
-  authorName: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-  },
-  authorMeta: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    marginTop: 4,
-  },
+  authorInfo: { flex: 1 },
+  authorName: { fontSize: 16, fontFamily: 'Inter-Bold' },
+  authorMeta: { fontSize: 14, fontFamily: 'Inter-Regular', marginTop: 4 },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingTop: 100,
   },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    marginTop: 15,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    marginTop: 5,
-    textAlign: 'center',
-  },
+  emptyText: { fontSize: 18, fontFamily: 'Inter-Bold', marginTop: 15 },
 });
 
 export default SearchScreen;

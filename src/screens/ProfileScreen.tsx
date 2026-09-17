@@ -10,6 +10,8 @@ import { getUserPlaylists } from '../features/playlists/playlistService';
 import PoemCard from '../components/PoemCard';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { fetchUserAchievements } from '../services/achievementService';
+import { UserAchievement } from '../types/achievement';
 
 const ProfileScreen = ({ route }) => {
   const { user: currentUser, logout } = useAuth();
@@ -24,6 +26,7 @@ const ProfileScreen = ({ route }) => {
   const [playlists, setPlaylists] = useState([]);
   const [userPoems, setUserPoems] = useState([]);
   const [activeTab, setActiveTab] = useState('poems');
+  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
 
   useEffect(() => {
     loadProfileData();
@@ -79,13 +82,15 @@ const ProfileScreen = ({ route }) => {
       console.error('Error fetching poems:', poemsError);
     }
 
-    // Get favorites and playlists
+    // Get favorites, playlists, achievements
     try {
       const favs = await getUserFavorites(user.id);
       const plists = await getUserPlaylists(user.id);
-      
+      const badges = await fetchUserAchievements(user.id);
+
       setFavorites(favs);
       setPlaylists(plists.data || []);
+      setAchievements(badges);
     } catch (error) {
       console.error('Error loading favorites/playlists:', error);
     }
@@ -184,6 +189,22 @@ const ProfileScreen = ({ route }) => {
                 />
               </View>
               
+              <TouchableOpacity
+                style={[styles.logoutButton, { borderColor: colors.primary }]}
+                onPress={() => navigation.navigate('ModerationQueue')}
+              >
+                <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+                <Text style={[styles.logoutButtonText, { color: colors.primary }]}>Moderation</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.logoutButton, { borderColor: colors.primary }]}
+                onPress={() => navigation.navigate('Reports')}
+              >
+                <Ionicons name="flag-outline" size={20} color={colors.primary} />
+                <Text style={[styles.logoutButtonText, { color: colors.primary }]}>Reports</Text>
+              </TouchableOpacity>
+
               {/* Logout Button */}
               <TouchableOpacity
                 style={[styles.logoutButton, { borderColor: colors.error }]}
@@ -198,12 +219,18 @@ const ProfileScreen = ({ route }) => {
       </View>
 
             <View style={[styles.statsContainer, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.statItem}>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={() => navigation.navigate('Followers', { userId: user?.id })}
+        >
           <Text style={[styles.statNumber, { color: colors.text }]}>{followersCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.statItem}>
+        <TouchableOpacity
+          style={styles.statItem}
+          onPress={() => navigation.navigate('Following', { userId: user?.id })}
+        >
           <Text style={[styles.statNumber, { color: colors.text }]}>{followingCount}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
         </TouchableOpacity>
@@ -221,6 +248,33 @@ const ProfileScreen = ({ route }) => {
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Playlists</Text>
         </TouchableOpacity>
       </View>
+
+      {user?.id === currentUser?.id && (
+        <TouchableOpacity
+          style={[styles.badgesRow, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('ActivityFeed')}
+        >
+          <Text style={[styles.badgesTitle, { color: colors.text }]}>Activity Feed</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>See your recent actions →</Text>
+        </TouchableOpacity>
+      )}
+
+      {user?.id === currentUser?.id && achievements.length > 0 && (
+        <TouchableOpacity
+          style={[styles.badgesRow, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('Achievements')}
+        >
+          <Text style={[styles.badgesTitle, { color: colors.text }]}>Badges</Text>
+          <View style={styles.badgesList}>
+            {achievements.slice(0, 5).map((badge) => (
+              <View key={badge.id} style={styles.badgeChip}>
+                <Ionicons name="trophy" size={14} color="#f39c12" />
+                <Text style={styles.badgeName} numberOfLines={1}>{badge.name}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+      )}
 
       <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
@@ -372,6 +426,35 @@ const styles = StyleSheet.create({
     color: '#e74c3c',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  badgesRow: {
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  badgesTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  badgesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  badgeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef5e7',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+    maxWidth: 140,
+  },
+  badgeName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#e67e22',
   },
   statsContainer: {
     flexDirection: 'row',

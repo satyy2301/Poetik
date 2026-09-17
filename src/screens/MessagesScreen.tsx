@@ -2,7 +2,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useUser } from '../context/UserContext';
-import messagingService, { getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages, setTypingStatus, subscribeToTyping } from '../features/messaging/messagingService';
+import {
+  getConversations, getMessages, sendMessage, markAsRead, subscribeToMessages,
+  setTypingStatus, subscribeToTyping, toggleReaction, searchMessages, archiveConversation,
+} from '../features/messaging/messagingService';
+import MessageReactions from '../components/MessageReactions';
+import { supabase } from '../lib/supabase';
 
 const MessagesScreen = ({ navigation }: any) => {
   const { user } = useUser();
@@ -14,6 +19,8 @@ const MessagesScreen = ({ navigation }: any) => {
   const [sending, setSending] = useState(false);
   const [text, setText] = useState('');
   const [isOtherTyping, setIsOtherTyping] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const scrollRef = useRef<ScrollView | null>(null);
   const typingTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -40,12 +47,26 @@ const MessagesScreen = ({ navigation }: any) => {
       const res: any = await getConversations(user.id, 50, 0);
       const { data } = res;
       // Build simple conversation list keyed by other user
+      const ids = new Set<string>();
+      (data || []).forEach((msg: any) => {
+        ids.add(msg.sender_id === user.id ? msg.receiver_id : msg.sender_id);
+      });
+      const { data: authors } = await supabase.from('authors').select('id, name').in('id', Array.from(ids));
+      const names: Record<string, string> = {};
+      (authors || []).forEach((a) => { names[a.id] = a.name; });
+      setNameMap(names);
+
       const map = new Map();
       (data || []).forEach((msg: any) => {
-        const other = msg.sender?.id === user.id ? msg.receiver : msg.sender;
-        if (!other) return;
-        const key = other.id;
-        if (!map.has(key)) map.set(key, { other, lastMessage: msg, unread: !msg.read && msg.receiver?.id === user.id });
+        const otherId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+        const key = otherId;
+        if (!map.has(key)) {
+          map.set(key, {
+            other: { id: otherId, name: names[otherId] || 'Poet' },
+            lastMessage: msg,
+            unread: !msg.read && msg.receiver_id === user.id,
+          });
+        }
       });
       const list = Array.from(map.values()).sort((a: any, b: any) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime());
       setConversations(list);
@@ -64,7 +85,7 @@ const MessagesScreen = ({ navigation }: any) => {
       const { data } = res;
       setMessages(data || []);
       // Mark unread messages as read
-      const unreadIds = (data || []).filter((m: any) => !m.read && m.sender?.id === otherUser.id).map((m: any) => m.id);
+      const unreadIds = (data || []).filter((m: any) => !m.read && m.sender_id === otherUser.id).map((m: any) => m.id);
       if (unreadIds.length) {
         await markAsRead(unreadIds);
         // refresh conversations
@@ -89,7 +110,7 @@ const MessagesScreen = ({ navigation }: any) => {
       content: text.trim(),
       created_at: new Date().toISOString(),
       read: false,
-      sender: { id: user.id },
+      sender_id: user.id,
     };
     setMessages(prev => [...prev, tempMsg]);
     setText('');
@@ -168,13 +189,22 @@ const MessagesScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <View style={styles.listPane}>
         <Text style={styles.heading}>Messages</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search messages..."
+          value={searchQuery}
+          onChangeText={async (q) => {
+            setSearchQuery(q);
+            if (q.length > 2) await searchMessages(user.id, q);
+          }}
+        />
         {loadingConvos ? <ActivityIndicator /> : (
           <FlatList
             data={conversations}
             keyExtractor={(item: any) => item.other.id}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.convoItem} onPress={() => openConversation(item.other)}>
-                <Text style={styles.convoTitle}>{item.other.username || item.other.id}</Text>
+                <Text style={styles.convoTitle}>{item.other.name || item.other.id}</Text>
                 <Text numberOfLines={1} style={styles.convoPreview}>{item.lastMessage?.content}</Text>
               </TouchableOpacity>
             )}
@@ -186,14 +216,27 @@ const MessagesScreen = ({ navigation }: any) => {
         {selectedUser ? (
           <>
             <View style={styles.chatHeader}>
-              <Text style={styles.chatTitle}>{selectedUser.username || selectedUser.id}</Text>
+              <Text style={styles.chatTitle}>{selectedUser.name || selectedUser.id}</Text>
               {isOtherTyping && <Text style={{ color: '#636e72', marginTop: 4, fontSize: 12 }}>typing...</Text>}
             </View>
             {loadingMessages ? <ActivityIndicator /> : (
               <ScrollView ref={scrollRef} style={styles.messagesScroll}>
                 {messages.map((m: any) => (
-                  <View key={m.id} style={[styles.messageBubble, m.sender?.id === user.id ? styles.outgoing : styles.incoming]}>
-                    <Text style={styles.messageText}>{m.content}</Text>
+                  <View key={m.id} style={[styles.messageBubble, m.sender_id === user.id ? styles.outgoing : styles.incoming]}>
+                    {m.message_type === 'poem' && m.poem ? (
+                      <Text style={styles.messageText}>📜 {m.poem.title}</Text>
+                    ) : (
+                      <Text style={styles.messageText}>{m.content}</Text>
+                    )}
+                    {m.edited_at && <Text style={styles.edited}>edited</Text>}
+                    <MessageReactions
+                      reactions={m.reactions || {}}
+                      currentUserId={user.id}
+                      onReact={async (emoji) => {
+                        await toggleReaction(m.id, emoji, user.id, m.reactions || {});
+                        openConversation(selectedUser);
+                      }}
+                    />
                     <Text style={styles.messageTime}>{new Date(m.created_at).toLocaleTimeString()}</Text>
                   </View>
                 ))}
@@ -235,6 +278,8 @@ const styles = StyleSheet.create({
   outgoing: { backgroundColor: '#74b9ff', alignSelf: 'flex-end' },
   messageText: { color: '#2d3436' },
   messageTime: { fontSize: 10, color: '#636e72', marginTop: 6 },
+  edited: { fontSize: 10, color: '#95a5a6', fontStyle: 'italic' },
+  searchInput: { borderWidth: 1, borderColor: '#ecf0f1', borderRadius: 8, padding: 8, marginBottom: 8, fontSize: 13 },
   composer: { flexDirection: 'row', alignItems: 'center', paddingTop: 8 },
   input: { flex: 1, borderWidth: 1, borderColor: '#ecf0f1', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, marginRight: 8 },
   sendButton: { backgroundColor: '#0984e3', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20 },

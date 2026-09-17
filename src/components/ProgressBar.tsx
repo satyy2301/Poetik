@@ -1,16 +1,32 @@
-// src/components/ProgressBar.tsx
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { animateProgress } from '../utils/animations';
 
-const ProgressBar = ({ progress, color = '#3498db', showText = true }) => {
+type ProgressBarProps = {
+  progress: number;
+  color?: string;
+  showText?: boolean;
+};
+
+const ProgressBar = ({ progress, color = '#3498db', showText = true }: ProgressBarProps) => {
+  const animatedWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    animateProgress(animatedWidth, progress).start();
+  }, [progress, animatedWidth]);
+
+  const widthInterpolated = animatedWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
+
   return (
     <View style={styles.container}>
       <View style={styles.bar}>
-        <View 
+        <Animated.View
           style={[
             styles.progress,
-            { width: `${Math.min(100, Math.max(0, progress * 100))}%` },
-            { backgroundColor: color }
+            { width: widthInterpolated, backgroundColor: color },
           ]}
         />
       </View>
@@ -44,4 +60,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProgressBar;
+export default React.memo(ProgressBar);

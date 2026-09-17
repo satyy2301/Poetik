@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-nativ
 import { supabase } from '../../lib/supabase';
 import { useUser } from '../../context/UserContext';
 import AIFeedbackWidget from '../learning/AIFeedbackWidget';
+import { FEATURES } from '../../config/features';
+import ComingSoonBanner from '../../components/ComingSoonBanner';
 
 const ChallengeSystem = ({ challenge, onComplete }: { challenge: any; onComplete: () => void }) => {
   const { user } = useUser();
@@ -12,9 +14,12 @@ const ChallengeSystem = ({ challenge, onComplete }: { challenge: any; onComplete
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const submitChallenge = async () => {
+    if (!FEATURES.AI_ENABLED) {
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // Get AI feedback
       const { data } = await supabase.functions.invoke('challenge-feedback', {
         body: {
           challengeId: challenge.id,
@@ -56,17 +61,29 @@ const ChallengeSystem = ({ challenge, onComplete }: { challenge: any; onComplete
         onChangeText={setUserSubmission}
       />
       
-      <TouchableOpacity
-        style={styles.submitButton}
-        onPress={submitChallenge}
-        disabled={isSubmitting || !userSubmission.trim()}
-      >
-        <Text style={styles.submitButtonText}>
-          {isSubmitting ? 'Submitting...' : 'Submit for AI Review'}
-        </Text>
-      </TouchableOpacity>
-      
-      {feedback && (
+      {FEATURES.AI_ENABLED ? (
+        <TouchableOpacity
+          style={styles.submitButton}
+          onPress={submitChallenge}
+          disabled={isSubmitting || !userSubmission.trim()}
+        >
+          <Text style={styles.submitButtonText}>
+            {isSubmitting ? 'Submitting...' : 'Submit for AI Review'}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <>
+          <TouchableOpacity style={[styles.submitButton, styles.submitButtonDisabled]} disabled>
+            <Text style={styles.submitButtonText}>Submit for AI Review</Text>
+          </TouchableOpacity>
+          <ComingSoonBanner
+            compact
+            message="AI challenge review will return in a future update."
+          />
+        </>
+      )}
+
+      {FEATURES.AI_ENABLED && feedback && (
         <>
           <AIFeedbackWidget feedback={feedback} />
           <TouchableOpacity
@@ -119,6 +136,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+    opacity: 0.8,
   },
   submitButtonText: {
     color: 'white',

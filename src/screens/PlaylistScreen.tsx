@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { getUserPlaylists, createPlaylist, deletePlaylist, updatePlaylist } from '../features/playlists/playlistService';
+import { getUserPlaylists, createPlaylist, deletePlaylist, setPlaylistPublic } from '../features/playlists/playlistService';
+import { Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -91,6 +92,26 @@ const PlaylistScreen = () => {
     navigation.navigate('PlaylistDetail', { playlist });
   };
 
+  const handleTogglePublic = async (playlist: any) => {
+    try {
+      const { data } = await setPlaylistPublic(playlist.id, !playlist.is_public, playlist.title);
+      setPlaylists((prev) => prev.map((p) => (p.id === playlist.id ? { ...p, ...data } : p)));
+      if (data?.is_public) {
+        Alert.alert('Public', `Share link: poetik.app/playlist/${data.share_slug}`);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not update playlist visibility');
+    }
+  };
+
+  const handleSharePlaylist = async (playlist: any) => {
+    if (!playlist.share_slug) {
+      Alert.alert('Make public first', 'Toggle public to generate a share link.');
+      return;
+    }
+    await Share.share({ message: `Check out my playlist: ${playlist.title}\nhttps://poetik.app/playlist/${playlist.share_slug}` });
+  };
+
   const renderPlaylistItem = ({ item: playlist }) => {
     const poemCount = playlist.playlist_poems?.length || 0;
     
@@ -110,6 +131,14 @@ const PlaylistScreen = () => {
         </View>
         
         <View style={styles.playlistActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleTogglePublic(playlist)}>
+            <Ionicons name={playlist.is_public ? 'globe' : 'globe-outline'} size={20} color="#3498db" />
+          </TouchableOpacity>
+          {playlist.is_public && (
+            <TouchableOpacity style={styles.actionButton} onPress={() => handleSharePlaylist(playlist)}>
+              <Ionicons name="share-outline" size={20} color="#2ecc71" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleDeletePlaylist(playlist.id, playlist.title)}

@@ -1,65 +1,92 @@
-// src/screens/WriteScreen.tsx
-import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, Button, StyleSheet, Text , TouchableOpacity,Keyboard, Alert, Modal, ScrollView } from 'react-native';
-import { supabase } from '../lib/supabase';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Keyboard,
+  Alert,
+  Modal,
+  ScrollView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types'
-import ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { useOpenAI } from '../context/OpenAIContext';
-import createOpenAIClient from '../lib/openai';
+import { FEATURES } from '../config/features';
+import ComingSoonBanner from '../components/ComingSoonBanner';
+import RichTextEditor, { RichTextEditorRef } from '../components/RichTextEditor';
+import TemplateSelector from '../components/TemplateSelector';
+import VersionHistoryModal from '../components/VersionHistoryModal';
+import { publishPoem as publishPoemToDb } from '../services/poemService';
+import { upsertUserAuthor } from '../services/authorService';
+import { submitPoemForReview } from '../services/moderationService';
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  saveVersion,
+  fetchVersions,
+  DraftVersion,
+} from '../services/draftService';
+import { PoemTemplate, getTemplateByForm } from '../data/poemTemplates';
+import { validateForm, estimateReadingTime } from '../utils/formValidators';
+import { requestAIWriting, AI_TEMPLATES, AITemplate } from '../services/aiWritingTools';
+import { logActivity } from '../services/activityService';
 
-// Define the props type for this screen
 type WriteScreenProps = NativeStackScreenProps<RootStackParamList, 'Write'>;
 
-// Poem categories/themes
 const POEM_CATEGORIES = [
-  'Romantic', 'Classic', 'Nature', 'Love', 'Melancholy', 'Joy', 'Spiritual', 
+  'Romantic', 'Classic', 'Nature', 'Love', 'Melancholy', 'Joy', 'Spiritual',
   'Philosophy', 'Friendship', 'Family', 'Loss', 'Hope', 'Adventure', 'Dreams',
-  'Seasons', 'City Life', 'Rural', 'War', 'Peace', 'Freedom', 'Other'
+  'Seasons', 'City Life', 'Rural', 'War', 'Peace', 'Freedom', 'Other',
 ];
 
-const POEM_FORMS = [
-  'Free Verse', 'Sonnet', 'Haiku', 'Limerick', 'Ballad', 'Ode', 'Epic', 
-  'Lyric', 'Narrative', 'Acrostic', 'Cinquain', 'Tanka', 'Villanelle', 'Other'
-];
+const AUTO_SAVE_MS = 30000;
 
 const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const { user } = useAuth();
   const { apiKey, setApiKey } = useOpenAI();
+  const editorRef = useRef<RichTextEditorRef>(null);
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [syllableCount, setSyllableCount] = useState(0);
-  const [isFocused, setIsFocused] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [selectedForm, setSelectedForm] = useState('');
+  const [activeTemplate, setActiveTemplate] = useState<PoemTemplate | undefined>();
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
+
   const [isPublishing, setIsPublishing] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-  const [selectedForm, setSelectedForm] = useState<string>('');
-  const [selectionStart, setSelectionStart] = useState(0);
-  const [selectionEnd, setSelectionEnd] = useState(0);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versions, setVersions] = useState<DraftVersion[]>([]);
+
+  const [focusMode, setFocusMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const [aiTemplate, setAiTemplate] = useState<AITemplate>('suggest');
+  const [aiTemperature, setAiTemperature] = useState(0.8);
+  const [aiMaxTokens, setAiMaxTokens] = useState(400);
+  const [styleOf, setStyleOf] = useState('Emily Dickinson');
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [localApiKey, setLocalApiKey] = useState('');
-  const contentInputRef = useRef<TextInput>(null);
-  const [aiTemplate, setAiTemplate] = useState<'suggest' | 'continue' | 'shorten' | 'tone' >('suggest');
-  const [aiTemperature, setAiTemperature] = useState<number>(0.8);
-  const [aiMaxTokens, setAiMaxTokens] = useState<number>(400);
-  const [aiError, setAiError] = useState<string | null>(null);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [previewText, setPreviewText] = useState('');
   const [undoStack, setUndoStack] = useState<string[]>([]);
 
-  const countSyllables = (text: string) => {
-    // Simple syllable counter (can be enhanced)
-    const words = text.trim().split(/\s+/);
-    return words.reduce((count, word) => count + Math.max(1, word.length / 3), 0);
-  };
+  const validation = validateForm(content, activeTemplate);
+  const readingTime = estimateReadingTime(content);
 
-  // Load last-used AI settings
   useEffect(() => {
     (async () => {
       try {
@@ -70,33 +97,80 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
           setAiTemperature(parsed.temperature ?? 0.8);
           setAiMaxTokens(parsed.maxTokens ?? 400);
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     })();
   }, []);
 
-  const persistAISettings = async () => {
-    try {
-      await AsyncStorage.setItem('AI_SETTINGS', JSON.stringify({ template: aiTemplate, temperature: aiTemperature, maxTokens: aiMaxTokens }));
-    } catch (e) {
-      // ignore
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const draft = await loadDraft(user.id);
+      if (draft) {
+        setTitle(draft.title);
+        setContent(draft.content);
+        if (draft.form) {
+          setSelectedForm(draft.form);
+          setActiveTemplate(getTemplateByForm(draft.form));
+        }
+        if (draft.themes?.length) setSelectedThemes(draft.themes);
+      }
+      try {
+        const v = await fetchVersions(user.id);
+        setVersions(v);
+      } catch {
+        // table may not exist yet
+      }
+    })();
+  }, [user?.id]);
+
+  const doAutoSave = useCallback(async () => {
+    if (!user?.id || (!title && !content)) return;
+    setSaveStatus('saving');
+    await saveDraft(user.id, { title, content, form: selectedForm, themes: selectedThemes });
+    setLastSaved(new Date());
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  }, [user?.id, title, content, selectedForm, selectedThemes]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const timer = setInterval(doAutoSave, AUTO_SAVE_MS);
+    return () => clearInterval(timer);
+  }, [user?.id, doAutoSave]);
+
+  const handleStatsChange = useCallback((stats: { words: number; syllables: number }) => {
+    setWordCount(stats.words);
+    setSyllableCount(stats.syllables);
+  }, []);
+
+  const handleTemplateSelect = (template: PoemTemplate) => {
+    setActiveTemplate(template);
+    setSelectedForm(template.form);
+    if (!content.trim()) setContent(template.scaffold);
+  };
+
+  const handleRestoreVersion = (version: DraftVersion) => {
+    setTitle(version.title);
+    setContent(version.content);
+    if (version.form) {
+      setSelectedForm(version.form);
+      setActiveTemplate(getTemplateByForm(version.form));
     }
+    setShowVersionModal(false);
+    Alert.alert('Restored', `Version ${version.version_number} loaded into editor.`);
   };
 
-  const handleContentChange = (text: string) => {
-    setContent(text);
-    setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
-    setSyllableCount(estimateSyllables(text));
+  const persistAISettings = async () => {
+    await AsyncStorage.setItem(
+      'AI_SETTINGS',
+      JSON.stringify({ template: aiTemplate, temperature: aiTemperature, maxTokens: aiMaxTokens }),
+    );
   };
 
-  // Simple syllable estimation (would use a library in production)
-  const estimateSyllables = (text: string) => {
-    return Math.floor(text.length / 3); // Rough approximation
-  };
- 
-  // Get AI suggestions for the current poem
-  const requestAISuggestionsDirect = async () => {
+  const requestAISuggestions = async () => {
+    if (!FEATURES.AI_ENABLED) return;
     if (!apiKey) {
       setShowApiKeyModal(true);
       return;
@@ -104,51 +178,23 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 
     setAiError(null);
     setIsAiLoading(true);
+    Keyboard.dismiss();
+
     try {
-      const client = createOpenAIClient(apiKey);
-
-      // Build prompt variants based on template
-      let prompt = '';
-      switch (aiTemplate) {
-        case 'continue':
-          prompt = `Continue and finish this poem in its current tone and style. Return a single poem text.\n\nTitle: ${title}\nContent: ${content}`;
-          break;
-        case 'shorten':
-          prompt = `Shorten the following poem while preserving meaning. Provide up to 3 alternate concise versions in a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
-          break;
-        case 'tone':
-          prompt = `Rewrite the poem in a different tone (give 3 variants) — options: solemn, joyful, ironic. Return a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
-          break;
-        case 'suggest':
-        default:
-          prompt = `Suggest up to 5 concise alternate versions or improvements for the following poem content. Return as a JSON array of strings.\n\nTitle: ${title}\nContent: ${content}`;
-      }
-
-      const response = await client.responses.create({
-        model: 'gpt-4o-mini',
-        input: prompt,
-        max_tokens: Math.min(2000, aiMaxTokens),
-        temperature: Math.max(0, Math.min(1, aiTemperature)),
+      const suggestions = await requestAIWriting({
+        apiKey,
+        template: aiTemplate,
+        title,
+        content,
+        temperature: aiTemperature,
+        maxTokens: aiMaxTokens,
+        styleOf,
       });
-
-      const text = response.output_text || (response.output?.[0]?.content?.[0]?.text) || '';
-      let suggestions: string[] = [];
-      try {
-        const parsed = JSON.parse(text);
-        if (Array.isArray(parsed)) suggestions = parsed.map(String).slice(0, 10);
-      } catch (err) {
-        // Fallback: split by blank lines or newlines
-        suggestions = text.split(/\n\n|\n/).map(s => s.trim()).filter(Boolean).slice(0, 10);
-      }
-
       setAiSuggestions(suggestions);
       await persistAISettings();
     } catch (err: any) {
-      console.error('OpenAI request failed', err);
-      if (err?.status === 429 || (err?.message && err.message.toLowerCase().includes('rate')) ) {
-        setAiError('Rate limit reached — try again in a moment.');
-      } else if (err?.message && err.message.toLowerCase().includes('permission')) {
-        setAiError('API key invalid or lacks permission. Please update your key.');
+      if (err?.status === 429) {
+        setAiError('Rate limit reached — try again shortly.');
       } else {
         setAiError('AI request failed. Check API key and network.');
       }
@@ -157,480 +203,312 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     }
   };
 
-  // Apply a suggestion to the poem
   const applySuggestion = (suggestion: string) => {
-    // push current content to undo stack
-    setUndoStack(prev => [...prev, content]);
+    setUndoStack((prev) => [...prev, content]);
     setContent(suggestion);
-    contentInputRef.current?.focus();
     setAiSuggestions([]);
+    editorRef.current?.focus();
   };
-  const undo = () => {
-    setUndoStack(prev => {
-      if (prev.length === 0) return prev;
+
+  const undoSuggestion = () => {
+    setUndoStack((prev) => {
+      if (!prev.length) return prev;
       const last = prev[prev.length - 1];
       setContent(last);
-      return prev.slice(0, prev.length - 1);
+      return prev.slice(0, -1);
     });
   };
-  const saveDraft = async () => {
-    await AsyncStorage.setItem('draft', JSON.stringify({ title, content }));
-  };
 
-  // Preview a suggestion without applying
-  const previewSuggestion = (text: string) => {
-    setPreviewText(text);
-    setPreviewModalVisible(true);
-  };
-
-  const publishPoem = async () => {
+  const handlePublishPress = () => {
     if (!user) {
-      Alert.alert('Error', 'You must be logged in to publish a poem');
+      Alert.alert('Error', 'You must be logged in to publish.');
       return;
     }
-
     if (!content.trim()) {
-      Alert.alert('Error', 'Please write your poem content before publishing');
+      Alert.alert('Error', 'Please write your poem before publishing.');
       return;
     }
-
     if (!title.trim()) {
-      Alert.alert('Error', 'Please give your poem a title before publishing');
+      Alert.alert('Error', 'Please give your poem a title.');
       return;
     }
-
     setShowCategoryModal(true);
   };
 
   const handlePublish = async () => {
+    if (!user) return;
     setIsPublishing(true);
     setShowCategoryModal(false);
 
     try {
-      // Use upsert to ensure the author exists
-      const { error: authorUpsertError } = await supabase
-        .from('authors')
-        .upsert([{
-          id: user.id,
-          name: user.email?.split('@')[0] || 'Unknown User',
-          created_at: new Date().toISOString(),
-        }], {
-          onConflict: 'id',
-          ignoreDuplicates: true
-        });
+      const authorName = user.email?.split('@')[0] || 'Unknown User';
+      await upsertUserAuthor(user.id, authorName);
 
-      if (authorUpsertError) {
-        console.error('Error upserting author:', authorUpsertError);
-        // Continue anyway, the author might already exist
-      }
-
-      // Now create the poem
-      const poemData = {
+      const published = await publishPoemToDb({
         title: title.trim(),
         content: content.trim(),
         author_id: user.id,
         themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
         form: selectedForm || 'Free Verse',
-        like_count: 0,
-        created_at: new Date().toISOString(),
-      };
+        visibility: 'pending',
+      }, user.id);
 
-      const { error } = await supabase
-        .from('poems')
-        .insert([poemData]);
+      await submitPoemForReview(published.id, published.title, published.content, user.id);
+      await logActivity(user.id, 'published', 'poem', published.id, { title: published.title });
+      await saveVersion(user.id, { title, content, form: selectedForm }, published.id);
 
-      if (error) throw error;
-
-      // Clear the form
       setTitle('');
       setContent('');
       setSelectedThemes([]);
       setSelectedForm('');
+      setActiveTemplate(undefined);
       setWordCount(0);
       setSyllableCount(0);
-      
-      // Remove draft
-      await AsyncStorage.removeItem('draft');
+      await clearDraft(user.id);
+
+      const v = await fetchVersions(user.id);
+      setVersions(v);
 
       Alert.alert(
-        'Success!', 
-        'Your poem has been published successfully!',
+        'Submitted for review',
+        'Your poem was saved and will appear after approval.',
         [
-          {
-            text: 'View Poems',
-            onPress: () => navigation.navigate('Read')
-          },
-          {
-            text: 'Write Another',
-            style: 'cancel'
-          }
-        ]
+          { text: 'Write Another', style: 'cancel' },
+          { text: 'Go to Read', onPress: () => navigation.navigate('Read') },
+        ],
       );
-
     } catch (error) {
-      console.error('Error publishing poem:', error);
-      
-      // More specific error handling
-      if (error.code === '23503') {
-        // Foreign key constraint error - try to create author and retry
-        try {
-          await supabase
-            .from('authors')
-            .insert([{
-              id: user.id,
-              name: user.email?.split('@')[0] || 'Unknown User',
-              created_at: new Date().toISOString(),
-            }]);
-          
-          // Retry poem insertion
-          const poemData = {
-            title: title.trim(),
-            content: content.trim(),
-            author_id: user.id,
-            themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
-            form: selectedForm || 'Free Verse',
-            like_count: 0,
-            created_at: new Date().toISOString(),
-          };
-
-          const { error: retryError } = await supabase
-            .from('poems')
-            .insert([poemData]);
-
-          if (retryError) throw retryError;
-
-          // Success after retry
-          setTitle('');
-          setContent('');
-          setSelectedThemes([]);
-          setSelectedForm('');
-          setWordCount(0);
-          setSyllableCount(0);
-          
-          await AsyncStorage.removeItem('draft');
-
-          Alert.alert(
-            'Success!', 
-            'Your poem has been published successfully!',
-            [
-              {
-                text: 'View Poems',
-                onPress: () => navigation.navigate('Read')
-              },
-              {
-                text: 'Write Another',
-                style: 'cancel'
-              }
-            ]
-          );
-          
-          return; // Exit successfully
-          
-        } catch (retryError) {
-          console.error('Retry failed:', retryError);
-          Alert.alert('Error', 'Failed to create your author profile. Please contact support.');
-        }
-      } else {
-        Alert.alert('Error', 'Failed to publish your poem. Please try again.');
-      }
+      console.error('publish error', error);
+      Alert.alert('Error', 'Failed to publish. Please try again.');
     } finally {
       setIsPublishing(false);
     }
   };
 
   const toggleTheme = (theme: string) => {
-    setSelectedThemes(prev => 
-      prev.includes(theme) 
-        ? prev.filter(t => t !== theme)
-        : [...prev, theme]
+    setSelectedThemes((prev) =>
+      prev.includes(theme) ? prev.filter((t) => t !== theme) : [...prev, theme],
     );
   };
 
-  const applyFormatting = (format: 'bold' | 'italic') => {
-    if (selectionStart === selectionEnd) {
-      // No text selected, just insert the formatting markers
-      const beforeText = content.substring(0, selectionStart);
-      const afterText = content.substring(selectionStart);
-      const marker = format === 'bold' ? '**' : '*';
-      const newText = beforeText + marker + marker + afterText;
-      setContent(newText);
-      
-      // Move cursor between the markers
-      setTimeout(() => {
-        try {
-          if (contentInputRef.current && typeof (contentInputRef.current as any).setSelection === 'function') {
-            (contentInputRef.current as any).setSelection(
-              selectionStart + marker.length,
-              selectionStart + marker.length
-            );
-          } else if (contentInputRef.current && typeof (contentInputRef.current as any).setNativeProps === 'function') {
-            (contentInputRef.current as any).setNativeProps({ selection: { start: selectionStart + marker.length, end: selectionStart + marker.length } });
-          } else if (contentInputRef.current && typeof (contentInputRef.current as any).focus === 'function') {
-            (contentInputRef.current as any).focus();
-          }
-        } catch (e) {
-          console.warn('setSelection guard failed', e);
-        }
-      }, 10);
-    } else {
-      // Text is selected, wrap it with formatting
-      const beforeText = content.substring(0, selectionStart);
-      const selectedText = content.substring(selectionStart, selectionEnd);
-      const afterText = content.substring(selectionEnd);
-      
-      const marker = format === 'bold' ? '**' : '*';
-      const newText = beforeText + marker + selectedText + marker + afterText;
-      setContent(newText);
-      
-      // Keep selection after formatting
-      setTimeout(() => {
-        try {
-          if (contentInputRef.current && typeof (contentInputRef.current as any).setSelection === 'function') {
-            (contentInputRef.current as any).setSelection(
-              selectionStart + marker.length,
-              selectionEnd + marker.length
-            );
-          } else if (contentInputRef.current && typeof (contentInputRef.current as any).setNativeProps === 'function') {
-            (contentInputRef.current as any).setNativeProps({ selection: { start: selectionStart + marker.length, end: selectionEnd + marker.length } });
-          } else if (contentInputRef.current && typeof (contentInputRef.current as any).focus === 'function') {
-            (contentInputRef.current as any).focus();
-          }
-        } catch (e) {
-          console.warn('setSelection guard failed', e);
-        }
-      }, 10);
-    }
-  };
+  const containerStyle = darkMode ? styles.containerDark : styles.container;
+  const headerHidden = focusMode;
 
-  const handleContentSelectionChange = (event: any) => {
-    setSelectionStart(event.nativeEvent.selection.start);
-    setSelectionEnd(event.nativeEvent.selection.end);
-  };
+  return (
+    <View style={containerStyle}>
+      {!headerHidden && (
+        <View style={styles.header}>
+          <Text style={[styles.screenTitle, darkMode && styles.textDark]}>New Poem</Text>
+          <View style={styles.headerActions}>
+            {saveStatus === 'saved' && (
+              <Text style={styles.savedText}>Saved</Text>
+            )}
+            <TouchableOpacity onPress={() => setShowTemplateModal(true)} style={styles.iconBtn}>
+              <Ionicons name="document-text-outline" size={22} color="#3498db" />
+            </TouchableOpacity>
+            {versions.length > 0 && (
+              <TouchableOpacity onPress={() => setShowVersionModal(true)} style={styles.iconBtn}>
+                <Ionicons name="time-outline" size={22} color="#3498db" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => setFocusMode(!focusMode)} style={styles.iconBtn}>
+              <Ionicons name={focusMode ? 'expand' : 'contract'} size={22} color="#3498db" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setDarkMode(!darkMode)} style={styles.iconBtn}>
+              <Ionicons name={darkMode ? 'sunny' : 'moon'} size={22} color="#3498db" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.publishButton, isPublishing && styles.publishDisabled]}
+              onPress={handlePublishPress}
+              disabled={isPublishing}
+            >
+              <Text style={styles.publishText}>
+                {isPublishing ? 'Publishing...' : 'Publish'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
-    const handleAIHelp = () => {
-    Keyboard.dismiss();
-    requestAISuggestionsDirect();
-  };
-
-    return (
-    <View style={styles.container}>
-      {/* Header with publish button */}
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>New Poem</Text>
-        <TouchableOpacity 
-          style={[styles.publishButton, isPublishing && styles.publishButtonDisabled]} 
-          onPress={publishPoem}
-          disabled={isPublishing}
-        >
-          <Text style={styles.publishButtonText}>
-            {isPublishing ? 'Publishing...' : 'Publish'}
-          </Text>
+      {focusMode && (
+        <TouchableOpacity style={styles.exitFocus} onPress={() => setFocusMode(false)}>
+          <Ionicons name="close" size={24} color="#7f8c8d" />
         </TouchableOpacity>
-      </View>
+      )}
 
-      {/* Title input */}
-      <TextInput
-        style={styles.titleInput}
-        placeholder="Give your poem a title..."
-        placeholderTextColor="#95a5a6"
-        value={title}
-        onChangeText={setTitle}
-      />
+      {!focusMode && (
+        <TextInput
+          style={[styles.titleInput, darkMode && styles.titleInputDark]}
+          placeholder="Give your poem a title..."
+          placeholderTextColor="#95a5a6"
+          value={title}
+          onChangeText={setTitle}
+        />
+      )}
 
-      {/* Content input */}
-      <TextInput
-        ref={contentInputRef}
-        style={styles.contentInput}
-        placeholder="Let your words flow..."
-        placeholderTextColor="#95a5a6"
-        multiline
+      <RichTextEditor
+        ref={editorRef}
         value={content}
-        onChangeText={handleContentChange}
-        onSelectionChange={handleContentSelectionChange}
-        scrollEnabled={!aiSuggestions.length}
+        onChange={setContent}
+        onStatsChange={handleStatsChange}
+        darkMode={darkMode}
+        focusMode={focusMode}
+        showToolbar={!focusMode}
       />
 
-      {/* Stats bar */}
-      <View style={styles.statsBar}>
-        <View style={styles.formatButtons}>
-          <TouchableOpacity 
-            style={styles.formatButton}
-            onPress={() => applyFormatting('bold')}
-          >
-            <Text style={styles.formatButtonText}>B</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.formatButton}
-            onPress={() => applyFormatting('italic')}
-          >
-            <Text style={[styles.formatButtonText, styles.italicText]}>I</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <Text style={styles.statText}>{syllableCount} syllables</Text>
-        <Text style={styles.statText}>{wordCount} words</Text>
-      </View>
-
-      {/* AI Controls */}
-      <View style={styles.aiControlsContainer}>
-        <View style={styles.aiRow}>
-          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'suggest' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('suggest')}>
-            <Text style={styles.aiTemplateText}>Suggest</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'continue' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('continue')}>
-            <Text style={styles.aiTemplateText}>Continue</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'shorten' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('shorten')}>
-            <Text style={styles.aiTemplateText}>Shorten</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.aiTemplateButton, aiTemplate === 'tone' && styles.aiTemplateSelected]} onPress={() => setAiTemplate('tone')}>
-            <Text style={styles.aiTemplateText}>Tone</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.aiRow}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.smallLabel}>Temperature (0-1)</Text>
-            <TextInput
-              value={String(aiTemperature)}
-              keyboardType="numeric"
-              onChangeText={(t) => {
-                const v = parseFloat(t) || 0;
-                setAiTemperature(Math.max(0, Math.min(1, v)));
-              }}
-              style={styles.smallInput}
-            />
-          </View>
-
-          <View style={{ width: 120 }}>
-            <Text style={styles.smallLabel}>Max tokens</Text>
-            <TextInput
-              value={String(aiMaxTokens)}
-              keyboardType="numeric"
-              onChangeText={(t) => {
-                const v = Math.max(50, Math.min(2000, parseInt(t || '400')));
-                setAiMaxTokens(v);
-              }}
-              style={styles.smallInput}
-            />
-          </View>
-        </View>
-
-        {aiError ? <Text style={styles.aiError}>{aiError}</Text> : null}
-
-        {aiSuggestions.length > 0 ? (
-          <View style={styles.suggestionsContainer}>
-            <Text style={styles.suggestionsTitle}>AI Suggestions</Text>
-            {aiSuggestions.map((suggestion, index) => (
-              <View key={index} style={styles.suggestionRow}>
-                <TouchableOpacity style={styles.suggestionItem} onPress={() => applySuggestion(suggestion)}>
-                  <Text style={styles.suggestionText} numberOfLines={10}>{suggestion}</Text>
-                </TouchableOpacity>
-                <View style={styles.suggestionActions}>
-                  <TouchableOpacity onPress={() => previewSuggestion(suggestion)} style={styles.previewButton}><Text style={styles.previewText}>Preview</Text></TouchableOpacity>
-                </View>
-              </View>
-            ))}
-            <View style={styles.suggestionFooter}>
-              <TouchableOpacity onPress={() => setAiSuggestions([])} style={styles.cancelButton}><Text style={styles.cancelButtonText}>Close</Text></TouchableOpacity>
-              <TouchableOpacity disabled={undoStack.length === 0} onPress={undo} style={[styles.confirmButton, undoStack.length === 0 && styles.confirmButtonDisabled]}><Text style={styles.confirmButtonText}>Undo</Text></TouchableOpacity>
+      {!focusMode && (
+        <>
+          {activeTemplate && validation.hints.length > 0 && (
+            <View style={styles.hintBox}>
+              <Text style={styles.hintTitle}>{validation.message}</Text>
+              {validation.hints.map((h, i) => (
+                <Text key={i} style={styles.hintText}>• {h}</Text>
+              ))}
             </View>
-          </View>
-        ) : (
-          <TouchableOpacity 
-            style={styles.aiButton}
-            onPress={handleAIHelp}
-            disabled={isAiLoading}
-          >
-            <MaterialIcons 
-              name="auto-awesome" 
-              size={20} 
-              color={isAiLoading ? "#bdc3c7" : "#3498db"} 
-            />
-            <Text style={[
-              styles.aiButtonText,
-              isAiLoading && styles.aiButtonTextDisabled
-            ]}>
-              {isAiLoading ? 'Thinking...' : 'AI Assistant'}
+          )}
+
+          <View style={styles.metaRow}>
+            <Text style={styles.metaText}>
+              {wordCount} words · {syllableCount} syllables · ~{readingTime} min read
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      
-      {/* Category Selection Modal */}
-      <Modal
-        visible={showCategoryModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCategoryModal(false)}
-      >
+            {selectedForm && <Text style={styles.formTag}>{selectedForm}</Text>}
+          </View>
+
+          <View style={styles.aiSection}>
+            {FEATURES.AI_ENABLED ? (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.aiTemplates}>
+                  {AI_TEMPLATES.map((t) => (
+                    <TouchableOpacity
+                      key={t.key}
+                      style={[styles.aiChip, aiTemplate === t.key && styles.aiChipActive]}
+                      onPress={() => setAiTemplate(t.key)}
+                    >
+                      <Text style={[styles.aiChipText, aiTemplate === t.key && styles.aiChipTextActive]}>
+                        {t.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                {aiTemplate === 'rewrite_style' && (
+                  <TextInput
+                    style={styles.styleInput}
+                    value={styleOf}
+                    onChangeText={setStyleOf}
+                    placeholder="Style of (e.g. Emily Dickinson)"
+                  />
+                )}
+
+                <View style={styles.aiParams}>
+                  <View style={styles.paramField}>
+                    <Text style={styles.paramLabel}>Temp</Text>
+                    <TextInput
+                      style={styles.paramInput}
+                      value={String(aiTemperature)}
+                      keyboardType="numeric"
+                      onChangeText={(t) => setAiTemperature(Math.max(0, Math.min(1, parseFloat(t) || 0)))}
+                    />
+                  </View>
+                  <View style={styles.paramField}>
+                    <Text style={styles.paramLabel}>Tokens</Text>
+                    <TextInput
+                      style={styles.paramInput}
+                      value={String(aiMaxTokens)}
+                      keyboardType="numeric"
+                      onChangeText={(t) => setAiMaxTokens(Math.max(50, Math.min(2000, parseInt(t || '400'))))}
+                    />
+                  </View>
+                </View>
+
+                {aiError && <Text style={styles.aiError}>{aiError}</Text>}
+
+                {aiSuggestions.length > 0 ? (
+                  <View style={styles.suggestionsBox}>
+                    <Text style={styles.suggestionsTitle}>AI Suggestions</Text>
+                    {aiSuggestions.map((s, i) => (
+                      <View key={i} style={styles.suggestionRow}>
+                        <TouchableOpacity style={styles.suggestionItem} onPress={() => applySuggestion(s)}>
+                          <Text style={styles.suggestionText} numberOfLines={8}>{s}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => { setPreviewText(s); setPreviewModalVisible(true); }}>
+                          <Text style={styles.previewLink}>Preview</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <View style={styles.suggestionFooter}>
+                      <TouchableOpacity onPress={() => setAiSuggestions([])}>
+                        <Text style={styles.footerBtn}>Close</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={undoSuggestion} disabled={!undoStack.length}>
+                        <Text style={[styles.footerBtn, !undoStack.length && styles.footerDisabled]}>Undo</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.aiButton}
+                    onPress={requestAISuggestions}
+                    disabled={isAiLoading}
+                  >
+                    <MaterialIcons name="auto-awesome" size={20} color={isAiLoading ? '#bdc3c7' : '#3498db'} />
+                    <Text style={styles.aiButtonText}>
+                      {isAiLoading ? 'Thinking...' : 'AI Assistant'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <ComingSoonBanner message="AI writing help will return in a future update." />
+            )}
+          </View>
+        </>
+      )}
+
+      <TemplateSelector
+        visible={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelect={handleTemplateSelect}
+        selectedForm={selectedForm}
+      />
+
+      <VersionHistoryModal
+        visible={showVersionModal}
+        versions={versions}
+        onClose={() => setShowVersionModal(false)}
+        onRestore={handleRestoreVersion}
+      />
+
+      <Modal visible={showCategoryModal} animationType="slide" transparent onRequestClose={() => setShowCategoryModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView>
               <Text style={styles.modalTitle}>Categorize Your Poem</Text>
-              
-              {/* Themes Selection */}
-              <Text style={styles.sectionTitle}>Select Themes (up to 3):</Text>
-              <View style={styles.categoriesGrid}>
+              <Text style={styles.sectionTitle}>Themes (up to 3)</Text>
+              <View style={styles.chipGrid}>
                 {POEM_CATEGORIES.map((theme) => (
                   <TouchableOpacity
                     key={theme}
-                    style={[
-                      styles.categoryChip,
-                      selectedThemes.includes(theme) && styles.categoryChipSelected
-                    ]}
+                    style={[styles.chip, selectedThemes.includes(theme) && styles.chipSelected]}
                     onPress={() => toggleTheme(theme)}
                     disabled={!selectedThemes.includes(theme) && selectedThemes.length >= 3}
                   >
-                    <Text style={[
-                      styles.categoryChipText,
-                      selectedThemes.includes(theme) && styles.categoryChipTextSelected
-                    ]}>
+                    <Text style={[styles.chipText, selectedThemes.includes(theme) && styles.chipTextSelected]}>
                       {theme}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-
-              {/* Form Selection */}
-              <Text style={styles.sectionTitle}>Poem Form:</Text>
-              <View style={styles.categoriesGrid}>
-                {POEM_FORMS.map((form) => (
-                  <TouchableOpacity
-                    key={form}
-                    style={[
-                      styles.categoryChip,
-                      selectedForm === form && styles.categoryChipSelected
-                    ]}
-                    onPress={() => setSelectedForm(form)}
-                  >
-                    <Text style={[
-                      styles.categoryChipText,
-                      selectedForm === form && styles.categoryChipTextSelected
-                    ]}>
-                      {form}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Action Buttons */}
               <View style={styles.modalActions}>
-                <TouchableOpacity 
-                  style={styles.cancelButton}
-                  onPress={() => setShowCategoryModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCategoryModal(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.confirmButton, isPublishing && styles.confirmButtonDisabled]}
+                <TouchableOpacity
+                  style={[styles.confirmBtn, isPublishing && styles.publishDisabled]}
                   onPress={handlePublish}
                   disabled={isPublishing}
                 >
-                  <Text style={styles.confirmButtonText}>
-                    {isPublishing ? 'Publishing...' : 'Publish Poem'}
-                  </Text>
+                  <Text style={styles.confirmText}>{isPublishing ? 'Publishing...' : 'Publish Poem'}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -638,294 +516,120 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
         </View>
       </Modal>
 
-      {/* API Key Modal */}
-      <Modal
-        visible={showApiKeyModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowApiKeyModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>OpenAI API Key</Text>
-            <Text style={{ marginBottom: 10 }}>Enter your OpenAI API key to enable AI features (will be stored locally).</Text>
-            <TextInput
-              placeholder="sk-..."
-              value={localApiKey}
-              onChangeText={setLocalApiKey}
-              style={{ borderWidth: 1, borderColor: '#e9ecef', padding: 10, borderRadius: 8, marginBottom: 10 }}
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowApiKeyModal(false)}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={async () => { await setApiKey(localApiKey); setShowApiKeyModal(false); }}>
-                <Text style={styles.confirmButtonText}>Save</Text>
-              </TouchableOpacity>
+      {FEATURES.AI_ENABLED && (
+        <Modal visible={showApiKeyModal} animationType="slide" transparent onRequestClose={() => setShowApiKeyModal(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>OpenAI API Key</Text>
+              <TextInput
+                placeholder="sk-..."
+                value={localApiKey}
+                onChangeText={setLocalApiKey}
+                style={styles.apiKeyInput}
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowApiKeyModal(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={async () => { await setApiKey(localApiKey); setShowApiKeyModal(false); }}
+                >
+                  <Text style={styles.confirmText}>Save</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
 
-      {/* Preview Modal */}
-      <Modal visible={previewModalVisible} animationType="slide" transparent={true} onRequestClose={() => setPreviewModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Preview Suggestion</Text>
-            <ScrollView style={{ maxHeight: 300 }}>
-              <Text style={{ color: '#34495e', lineHeight: 22 }}>{previewText}</Text>
-            </ScrollView>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 15 }}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setPreviewModalVisible(false)}>
-                <Text style={styles.cancelButtonText}>Close</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={() => { applySuggestion(previewText); setPreviewModalVisible(false); }}>
-                <Text style={styles.confirmButtonText}>Apply</Text>
-              </TouchableOpacity>
+      {FEATURES.AI_ENABLED && (
+        <Modal visible={previewModalVisible} animationType="slide" transparent onRequestClose={() => setPreviewModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Preview</Text>
+              <ScrollView style={{ maxHeight: 300 }}>
+                <Text style={styles.previewBody}>{previewText}</Text>
+              </ScrollView>
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setPreviewModalVisible(false)}>
+                  <Text style={styles.cancelText}>Close</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.confirmBtn}
+                  onPress={() => { applySuggestion(previewText); setPreviewModalVisible(false); }}
+                >
+                  <Text style={styles.confirmText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 15,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  publishButton: {
-    backgroundColor: '#00b894',
-    paddingVertical: 6,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-  },
-  publishButtonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  publishButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  titleInput: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#2c3e50',
-  },
-  contentInput: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 24,
-    textAlignVertical: 'top',
-    color: '#2c3e50',
-    marginBottom: 15,
-  },
-  statsBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  formatButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  formatButton: {
-    backgroundColor: '#dfe6e9',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  formatButtonText: {
-    fontWeight: 'bold',
-    color: '#2c3e50',
-  },
-  italicText: {
-    fontStyle: 'italic',
-  },
-  statText: {
-    color: '#7f8c8d',
-    fontSize: 14,
-  },
-  aiButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e3f2fd',
-    padding: 12,
-    borderRadius: 25,
-    alignSelf: 'center',
-    marginTop: 10,
-  },
-  aiButtonText: {
-    marginLeft: 8,
-    color: '#3498db',
-    fontWeight: '600',
-  },
-  aiButtonTextDisabled: {
-    color: '#bdc3c7',
-  },
-  suggestionsContainer: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  suggestionsTitle: {
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 10,
-  },
-  suggestionItem: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
-  },
-  suggestionText: {
-    color: '#34495e',
-    lineHeight: 22,
-  },
-  closeSuggestions: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    marginBottom: 8,
-  },
-  categoryChipSelected: {
-    backgroundColor: '#3498db',
-    borderColor: '#3498db',
-  },
-  categoryChipText: {
-    fontSize: 14,
-    color: '#495057',
-  },
-  categoryChipTextSelected: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    gap: 10,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#e9ecef',
-    padding: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    color: '#6c757d',
-    fontWeight: '600',
-  },
-  confirmButton: {
-    flex: 1,
-    backgroundColor: '#00b894',
-    padding: 12,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  confirmButtonDisabled: {
-    backgroundColor: '#bdc3c7',
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  // Added style snippets for AI controls
-  aiControlsContainer: {
-    marginTop: 10,
-  },
-  aiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  aiTemplateButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: '#ecf0f1',
-    marginRight: 8,
-  },
-  aiTemplateSelected: {
-    backgroundColor: '#3498db',
-  },
-  aiTemplateText: {
-    color: '#2c3e50',
-    fontWeight: '600',
-  },
-  smallLabel: { fontSize: 12, color: '#636e72', marginBottom: 4 },
-  smallInput: { borderWidth: 1, borderColor: '#e9ecef', padding: 8, borderRadius: 8, backgroundColor: 'white' },
-  aiError: { color: '#e74c3c', marginBottom: 8 },
-  suggestionRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
-  suggestionActions: { marginLeft: 8 },
-  previewButton: { padding: 8 },
-  previewText: { color: '#0984e3', fontWeight: '600' },
-  suggestionFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  container: { flex: 1, padding: 15, backgroundColor: '#f8f9fa' },
+  containerDark: { flex: 1, padding: 15, backgroundColor: '#16213e' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
+  textDark: { color: '#ecf0f1' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  iconBtn: { padding: 4 },
+  savedText: { fontSize: 11, color: '#2ecc71', fontWeight: '600' },
+  publishButton: { backgroundColor: '#00b894', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 15 },
+  publishDisabled: { backgroundColor: '#bdc3c7' },
+  publishText: { color: 'white', fontWeight: '600' },
+  exitFocus: { position: 'absolute', top: 8, right: 8, zIndex: 10, padding: 8 },
+  titleInput: { fontSize: 20, fontWeight: 'bold', marginBottom: 12, color: '#2c3e50' },
+  titleInputDark: { color: '#ecf0f1' },
+  hintBox: { backgroundColor: '#ebf5fb', borderRadius: 8, padding: 10, marginBottom: 8 },
+  hintTitle: { fontWeight: '600', color: '#2980b9', marginBottom: 4 },
+  hintText: { fontSize: 12, color: '#3498db' },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  metaText: { fontSize: 12, color: '#7f8c8d' },
+  formTag: { fontSize: 11, color: '#3498db', fontWeight: '600', backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  aiSection: { marginTop: 4 },
+  aiTemplates: { marginBottom: 8 },
+  aiChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#ecf0f1', marginRight: 6 },
+  aiChipActive: { backgroundColor: '#3498db' },
+  aiChipText: { color: '#2c3e50', fontWeight: '600', fontSize: 13 },
+  aiChipTextActive: { color: 'white' },
+  styleInput: { borderWidth: 1, borderColor: '#e9ecef', borderRadius: 8, padding: 8, marginBottom: 8, backgroundColor: 'white' },
+  aiParams: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  paramField: { flex: 1 },
+  paramLabel: { fontSize: 11, color: '#636e72', marginBottom: 2 },
+  paramInput: { borderWidth: 1, borderColor: '#e9ecef', borderRadius: 8, padding: 8, backgroundColor: 'white' },
+  aiError: { color: '#e74c3c', marginBottom: 6 },
+  aiButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#e3f2fd', padding: 12, borderRadius: 25, marginTop: 4 },
+  aiButtonText: { marginLeft: 8, color: '#3498db', fontWeight: '600' },
+  suggestionsBox: { backgroundColor: 'white', borderRadius: 10, padding: 12, marginTop: 8 },
+  suggestionsTitle: { fontWeight: 'bold', marginBottom: 8, color: '#2c3e50' },
+  suggestionRow: { flexDirection: 'row', marginBottom: 8, alignItems: 'flex-start' },
+  suggestionItem: { flex: 1, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' },
+  suggestionText: { color: '#34495e', lineHeight: 22 },
+  previewLink: { color: '#0984e3', fontWeight: '600', padding: 8 },
+  suggestionFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  footerBtn: { color: '#3498db', fontWeight: '600' },
+  footerDisabled: { color: '#bdc3c7' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  modalContent: { backgroundColor: 'white', borderRadius: 20, padding: 20, width: '90%', maxHeight: '80%' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 16, color: '#2c3e50' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 10, color: '#2c3e50' },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  chip: { backgroundColor: '#f8f9fa', borderWidth: 1, borderColor: '#e9ecef', borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
+  chipSelected: { backgroundColor: '#3498db', borderColor: '#3498db' },
+  chipText: { color: '#495057' },
+  chipTextSelected: { color: 'white', fontWeight: '600' },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  cancelBtn: { flex: 1, backgroundColor: '#e9ecef', padding: 12, borderRadius: 25, alignItems: 'center' },
+  cancelText: { color: '#6c757d', fontWeight: '600' },
+  confirmBtn: { flex: 1, backgroundColor: '#00b894', padding: 12, borderRadius: 25, alignItems: 'center' },
+  confirmText: { color: 'white', fontWeight: '600' },
+  apiKeyInput: { borderWidth: 1, borderColor: '#e9ecef', padding: 10, borderRadius: 8, marginBottom: 12 },
+  previewBody: { color: '#34495e', lineHeight: 24 },
 });
 
 export default WriteScreen;

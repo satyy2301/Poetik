@@ -15,21 +15,48 @@ import MessagesScreen from '../screens/MessagesScreen';
 import LessonDetailScreen from '../screens/LessonsDetailScreen';
 import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
 import QuizListScreen from '../screens/QuizListScreen';
+import QuizDetailScreen from '../screens/QuizDetailScreen';
 import AITutorScreen from '../screens/AITutorScreen';
+import ModerationQueueScreen from '../screens/admin/ModerationQueueScreen';
+import ReportsScreen from '../screens/admin/ReportsScreen';
+import { deferScreen } from './lazyScreens';
+
+const LazyStudyTogetherScreen = deferScreen(() => import('../screens/StudyTogetherScreen'));
+import AchievementsScreen from '../screens/AchievementsScreen';
+import LeaderboardScreen from '../screens/LeaderboardScreen';
+import { useNotifications } from '../context/NotificationContext';
+import { View, Text } from 'react-native';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
 const HeaderIcons = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { theme } = useTheme();
+  const { unreadCount } = useNotifications();
   const colors = theme.colors;
 
   return (
     <>
       <TouchableOpacity
+        onPress={() => navigation.navigate('Notifications')}
+        style={{ marginRight: 12 }}
+      >
+        <Ionicons name="notifications-outline" size={24} color={colors.text} />
+        {unreadCount > 0 && (
+          <View style={{
+            position: 'absolute', top: -4, right: -4, backgroundColor: '#e74c3c',
+            borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
         onPress={() => navigation.navigate('Search')}
-        style={{ marginRight: 15 }}
+        style={{ marginRight: 12 }}
       >
         <Ionicons name="search-outline" size={24} color={colors.text} />
       </TouchableOpacity>
@@ -119,7 +146,21 @@ const AppNavigator = () => {
       <Stack.Screen name="LessonDetail" component={LessonDetailScreen} />
       <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
       <Stack.Screen name="QuizList" component={QuizListScreen} />
+      <Stack.Screen name="QuizDetail" component={QuizDetailScreen} options={{ title: 'Quiz' }} />
       <Stack.Screen name="AITutor" component={AITutorScreen} />
+      <Stack.Screen
+        name="ModerationQueue"
+        component={ModerationQueueScreen}
+        options={{ title: 'Moderation' }}
+      />
+      <Stack.Screen
+        name="Reports"
+        component={ReportsScreen}
+        options={{ title: 'Abuse Reports' }}
+      />
+      <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
+      <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaderboard' }} />
+      <Stack.Screen name="StudyTogether" component={LazyStudyTogetherScreen} options={{ title: 'Study Together' }} />
     </Stack.Navigator>
   );
 };

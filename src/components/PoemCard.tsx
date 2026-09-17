@@ -7,7 +7,12 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
 
-const PoemCard = ({ poem, onPress, onAuthorPress, onLike }) => {
+const PoemCard = ({ poem, onPress, onAuthorPress, onLike }: {
+  poem: any;
+  onPress: () => void;
+  onAuthorPress: () => void;
+  onLike: () => void;
+}) => {
   const { user } = useAuth();
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -441,4 +446,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default PoemCard;
+export default React.memo(PoemCard);

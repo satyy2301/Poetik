@@ -1,5 +1,8 @@
 import { supabase } from '../../lib/supabase';
 
+const generateSlug = (title: string) =>
+  `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}-${Date.now().toString(36)}`;
+
 export const getUserPlaylists = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -9,7 +12,11 @@ export const getUserPlaylists = async (userId: string) => {
         title,
         description,
         created_at,
-        playlist_poems!inner(
+        is_public,
+        share_slug,
+        follower_count,
+        play_count,
+        playlist_poems(
           poem:poems(
             id,
             title,
@@ -126,6 +133,66 @@ export const deletePlaylist = async (playlistId: string) => {
     console.error('Error deleting playlist:', error);
     return { error };
   }
+};
+
+export const setPlaylistPublic = async (playlistId: string, isPublic: boolean, title?: string) => {
+  const updates: Record<string, unknown> = { is_public: isPublic, updated_at: new Date().toISOString() };
+  if (isPublic) {
+    const { data } = await supabase.from('playlists').select('share_slug, title').eq('id', playlistId).single();
+    if (!data?.share_slug) {
+      updates.share_slug = generateSlug(title || data?.title || 'playlist');
+    }
+  }
+  const { data, error } = await supabase
+    .from('playlists')
+    .update(updates)
+    .eq('id', playlistId)
+    .select()
+    .single();
+  if (error) throw error;
+  return { data, error: null };
+};
+
+export const getPublicPlaylist = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select(`
+      id, title, description, is_public, share_slug, follower_count, play_count,
+      playlist_poems(poem:poems(id, title, content, themes, form, like_count, author:authors(id, name)))
+    `)
+    .eq('share_slug', slug)
+    .eq('is_public', true)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const followPlaylist = async (userId: string, playlistId: string) => {
+  const { error } = await supabase.from('playlist_followers').insert([{ user_id: userId, playlist_id: playlistId }]);
+  if (error) throw error;
+  const { data } = await supabase.from('playlists').select('follower_count').eq('id', playlistId).single();
+  await supabase.from('playlists').update({ follower_count: (data?.follower_count || 0) + 1 }).eq('id', playlistId);
+};
+
+export const unfollowPlaylist = async (userId: string, playlistId: string) => {
+  await supabase.from('playlist_followers').delete().eq('user_id', userId).eq('playlist_id', playlistId);
+  const { data } = await supabase.from('playlists').select('follower_count').eq('id', playlistId).single();
+  await supabase.from('playlists').update({ follower_count: Math.max(0, (data?.follower_count || 1) - 1) }).eq('id', playlistId);
+};
+
+export const isFollowingPlaylist = async (userId: string, playlistId: string) => {
+  const { data } = await supabase
+    .from('playlist_followers')
+    .select('user_id')
+    .eq('user_id', userId)
+    .eq('playlist_id', playlistId)
+    .maybeSingle();
+  return !!data;
+};
+
+export const incrementPlayCount = async (playlistId: string) => {
+  const { data } = await supabase.from('playlists').select('play_count').eq('id', playlistId).single();
+  await supabase.from('playlists').update({ play_count: (data?.play_count || 0) + 1 }).eq('id', playlistId);
 };
 
 export const updatePlaylist = async (playlistId: string, updates: { title?: string; description?: string }) => {

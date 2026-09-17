@@ -6,6 +6,8 @@ import AIFeedbackWidget from './AIFeedbackWidget';
 import ProgressDots from './ProgressDots';
 import { supabase } from '../../lib/supabase';
 import { useUser } from '../../context/UserContext';
+import { FEATURES } from '../../config/features';
+import ComingSoonBanner from '../../components/ComingSoonBanner';
 
 const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => void }) => {
   const { user } = useUser();
@@ -48,6 +50,10 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
   };
 
   const getAIFeedback = async () => {
+    if (!FEATURES.AI_ENABLED) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data } = await supabase.functions.invoke('lesson-feedback', {
@@ -91,15 +97,27 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
               value={userResponse}
               onChangeText={setUserResponse}
             />
-            <TouchableOpacity
-              style={styles.feedbackButton}
-              onPress={getAIFeedback}
-              disabled={isLoading || !userResponse.trim()}
-            >
-              <Text style={styles.feedbackButtonText}>
-                {isLoading ? 'Analyzing...' : 'Get AI Feedback'}
-              </Text>
-            </TouchableOpacity>
+            {FEATURES.AI_ENABLED ? (
+              <TouchableOpacity
+                style={styles.feedbackButton}
+                onPress={getAIFeedback}
+                disabled={isLoading || !userResponse.trim()}
+              >
+                <Text style={styles.feedbackButtonText}>
+                  {isLoading ? 'Analyzing...' : 'Get AI Feedback'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity style={[styles.feedbackButton, styles.feedbackButtonDisabled]} disabled>
+                  <Text style={styles.feedbackButtonText}>Get AI Feedback</Text>
+                </TouchableOpacity>
+                <ComingSoonBanner
+                  compact
+                  message="AI lesson feedback will return in a future update."
+                />
+              </>
+            )}
           </View>
         );
       
@@ -143,7 +161,7 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
         <TouchableOpacity
           style={[styles.navButton, styles.nextButton]}
           onPress={handleNext}
-          disabled={currentStep.type === 'interactive' && !feedback}
+          disabled={FEATURES.AI_ENABLED && currentStep.type === 'interactive' && !feedback}
         >
           <Text style={styles.navButtonText}>
             {currentStepIndex === lesson.steps.length - 1 ? 'Complete' : 'Next'}
@@ -208,6 +226,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 15,
     alignItems: 'center',
+  },
+  feedbackButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+    opacity: 0.8,
   },
   feedbackButtonText: {
     color: 'white',
