@@ -2,13 +2,12 @@
 
 **Poetik** is a full-stack creative studio where users learn, write, and share poetry through AI-guided education, interactive writing tools, and a vibrant community. Built for aspiring poets, writers, and educators to explore the art of verse in a modern, engaging digital environment.
 
-https://github.com/user-attachments/assets/89c0503c-4d30-4f1c-b148-f8b59cb30d54
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.72+-blue.svg)](https://reactnative.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6.svg)](https://typescriptlang.org)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E.svg)](https://supabase.com)
-[![OpenAI](https://img.shields.io/badge/OpenAI-GPT-412991.svg)](https://openai.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+https://github.com/user-attachments/assets/62c365a6-fee3-4a1e-bc76-b37a8c91ba2c
+
+<img width="285" height="610" alt="image" src="https://github.com/user-attachments/assets/3add6cfd-d359-4de7-ab30-1332973d5067" />
+
+
 
 ---
 
