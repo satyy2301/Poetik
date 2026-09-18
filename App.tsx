@@ -12,6 +12,7 @@ import { ProgressProvider } from './src/context/ProgressContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { initAnalytics } from './src/utils/analytics';
 import { initErrorTracking } from './src/utils/errorTracking';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra || {};
@@ -40,21 +41,23 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <OpenAIProvider>
-          <AuthProvider>
-            <UserProvider>
-              <ProgressProvider>
-                <NotificationProvider>
-                  <StatusBar style="auto" />
-                  <RootNavigator />
-                </NotificationProvider>
-              </ProgressProvider>
-            </UserProvider>
-          </AuthProvider>
-        </OpenAIProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <OpenAIProvider>
+            <AuthProvider>
+              <UserProvider>
+                <ProgressProvider>
+                  <NotificationProvider>
+                    <StatusBar style="auto" />
+                    <RootNavigator />
+                  </NotificationProvider>
+                </ProgressProvider>
+              </UserProvider>
+            </AuthProvider>
+          </OpenAIProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

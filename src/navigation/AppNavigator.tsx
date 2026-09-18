@@ -14,15 +14,15 @@ import SearchScreen from '../screens/SearchScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import LessonDetailScreen from '../screens/LessonsDetailScreen';
-import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
-import QuizListScreen from '../screens/QuizListScreen';
 import QuizDetailScreen from '../screens/QuizDetailScreen';
 import AITutorScreen from '../screens/AITutorScreen';
-import ModerationQueueScreen from '../screens/admin/ModerationQueueScreen';
-import ReportsScreen from '../screens/admin/ReportsScreen';
 import { deferScreen } from './lazyScreens';
 
 const LazyStudyTogetherScreen = deferScreen(() => import('../screens/StudyTogetherScreen'));
+const LazyChallengeDetailScreen = deferScreen(() => import('../screens/ChallengeDetailScreen'));
+const LazyQuizListScreen = deferScreen(() => import('../screens/QuizListScreen'));
+const LazyModerationQueueScreen = deferScreen(() => import('../screens/admin/ModerationQueueScreen'));
+const LazyReportsScreen = deferScreen(() => import('../screens/admin/ReportsScreen'));
 import AchievementsScreen from '../screens/AchievementsScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import { useNotifications } from '../context/NotificationContext';
@@ -140,18 +140,18 @@ const AppNavigator = () => {
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
-      <Stack.Screen name="QuizList" component={QuizListScreen} />
+      <Stack.Screen name="ChallengeDetail" component={LazyChallengeDetailScreen} />
+      <Stack.Screen name="QuizList" component={LazyQuizListScreen} />
       <Stack.Screen name="QuizDetail" component={QuizDetailScreen} options={{ title: 'Quiz' }} />
       <Stack.Screen name="AITutor" component={AITutorScreen} />
       <Stack.Screen
         name="ModerationQueue"
-        component={ModerationQueueScreen}
+        component={LazyModerationQueueScreen}
         options={{ title: 'Moderation' }}
       />
       <Stack.Screen
         name="Reports"
-        component={ReportsScreen}
+        component={LazyReportsScreen}
         options={{ title: 'Abuse Reports' }}
       />
       <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />

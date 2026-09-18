@@ -1,8 +1,18 @@
 // supabase/functions/lesson-feedback/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rateLimiter.ts';
 
 serve(async (req) => {
+  const clientKey = req.headers.get('x-forwarded-for') || 'anonymous';
+  const rateLimit = checkRateLimit(`lesson-feedback:${clientKey}`, {
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetAt);
+  }
+
   const { lessonId, step, userResponse } = await req.json();
   
   // Initialize Supabase client

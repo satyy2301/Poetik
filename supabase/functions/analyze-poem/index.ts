@@ -1,6 +1,7 @@
 // supabase/functions/analyze-poem/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rateLimiter.ts';
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -16,6 +17,15 @@ interface RequestData {
 
 serve(async (req: Request) => {
   try {
+    const clientKey = req.headers.get('x-forwarded-for') || 'anonymous';
+    const rateLimit = checkRateLimit(`analyze-poem:${clientKey}`, {
+      maxRequests: 20,
+      windowMs: 60_000,
+    });
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetAt);
+    }
+
     const { poem, userId, analysisType = 'quick' }: RequestData = await req.json();
     
     if (!poem) {

@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase'; // Add this import
 import { getCurrentUser, signIn, signOut, signUp } from '../lib/auth';
+import { trackEvent } from '../utils/analytics';
+import { captureException } from '../utils/errorTracking';
 
 type AuthContextType = {
   user: any;
@@ -22,9 +24,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkUser();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
+      if (event === 'SIGNED_IN' && session?.user) {
+        trackEvent('login', { user_id: session.user.id });
+      }
     });
 
     return () => {
@@ -107,7 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setUser(currentUser);
     } catch (err) {
-      console.warn('checkUser failed', err);
+      captureException(err, { action: 'checkUser' });
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -119,6 +124,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signIn(email, password);
       await checkUser();
+      trackEvent('login');
+    } catch (err) {
+      captureException(err, { action: 'login' });
+      throw err;
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +138,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signUp(email, password, username);
       await checkUser();
+      trackEvent('signup', { username });
+    } catch (err) {
+      captureException(err, { action: 'signup' });
+      throw err;
     } finally {
       setIsLoading(false);
     }

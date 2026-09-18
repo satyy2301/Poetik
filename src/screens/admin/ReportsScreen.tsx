@@ -8,7 +8,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { AbuseReport, fetchPendingReports, updateReportStatus } from '../../services/abuseService';
+import {
+  AbuseReport,
+  blockUser,
+  fetchPendingReports,
+  updateReportStatus,
+} from '../../services/abuseService';
 import { useTheme } from '../../context/ThemeContext';
 
 const ReportsScreen = () => {
@@ -33,14 +38,36 @@ const ReportsScreen = () => {
     loadReports();
   }, [loadReports]);
 
-  const handleAction = async (report: AbuseReport, status: 'reviewed' | 'dismissed' | 'actioned') => {
+  const handleAction = async (
+    report: AbuseReport,
+    status: 'reviewed' | 'dismissed' | 'actioned',
+    blockTarget = false,
+  ) => {
     try {
+      if (blockTarget && report.target_type === 'user') {
+        await blockUser(report.target_id, report.reason);
+      }
       await updateReportStatus(report.id, status);
       setReports((prev) => prev.filter((r) => r.id !== report.id));
-      Alert.alert('Updated', `Report marked as ${status}.`);
+      Alert.alert('Updated', blockTarget ? 'User blocked and report actioned.' : `Report marked as ${status}.`);
     } catch {
       Alert.alert('Error', 'Could not update report.');
     }
+  };
+
+  const confirmBlock = (report: AbuseReport) => {
+    Alert.alert(
+      'Block user',
+      'Block the reported user and mark this report as actioned?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Block',
+          style: 'destructive',
+          onPress: () => handleAction(report, 'actioned', true),
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -79,6 +106,14 @@ const ReportsScreen = () => {
               >
                 <Text style={styles.btnText}>Action</Text>
               </TouchableOpacity>
+              {item.target_type === 'user' && (
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: '#c0392b' }]}
+                  onPress={() => confirmBlock(item)}
+                >
+                  <Text style={styles.btnText}>Block</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={[styles.btn, { backgroundColor: colors.border }]}
                 onPress={() => handleAction(item, 'dismissed')}

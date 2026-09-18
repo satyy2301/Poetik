@@ -1,0 +1,168 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #1a1a2e;
+  line-height: 1.6;
+  background: #faf9f7;
+}
+
+a {
+  color: #6b4eff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #3d2c8d 100%);
+  color: #fff;
+  min-height: 70vh;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 960px;
+  margin: 0 auto 3rem;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.nav-links a {
+  color: #e0d9ff;
+  margin-left: 1.5rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+
+.hero-content {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.15rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.cta {
+  display: inline-block;
+  background: #6b4eff;
+  color: #fff !important;
+  padding: 0.9rem 2rem;
+  border-radius: 8px;
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  text-decoration: none !important;
+}
+
+.cta:hover {
+  background: #5a3de6;
+}
+
+.cta-note {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-family: system-ui, sans-serif;
+}
+
+.features {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+
+.features h2 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.card h3 {
+  color: #6b4eff;
+  margin-bottom: 0.5rem;
+  font-family: system-ui, sans-serif;
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.footer {
+  text-align: center;
+  padding: 2rem 1.5rem 3rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: #666;
+  border-top: 1px solid #e8e4df;
+}
+
+.footer p {
+  margin-bottom: 0.5rem;
+}
+
+.legal {
+  margin-top: 1rem;
+}
+
+.legal-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.legal-page h1 {
+  margin-bottom: 0.5rem;
+}
+
+.legal-page h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.legal-page p,
+.legal-page li {
+  margin-bottom: 0.75rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 2rem;
+  font-family: system-ui, sans-serif;
+}

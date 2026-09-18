@@ -51,6 +51,27 @@ export const updateReportStatus = async (reportId: string, status: ReportStatus)
   if (error) throw error;
 };
 
+export const isUserBlocked = async (userId: string): Promise<boolean> => {
+  const { data, error } = await supabase.rpc('is_user_blocked', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.warn('Block check failed:', error.message);
+    return false;
+  }
+  return Boolean(data);
+};
+
+export const blockUser = async (userId: string, reason?: string) => {
+  const { error } = await supabase.rpc('block_user', {
+    p_user_id: userId,
+    p_reason: reason || null,
+  });
+
+  if (error) throw error;
+};
+
 export const checkRateLimit = async (
   userId: string,
   action: string,

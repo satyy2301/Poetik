@@ -215,9 +215,18 @@ npx expo start --android
 # Web Browser
 npx expo start --web
 
-# Production build
-eas build --platform ios --profile production
+# Android beta (closed testing)
+npm run build:android:preview
+
+# Android production (Play Store)
+npm run build:android:production
 ```
+
+**Package name:** `com.poetik.app`
+
+**Landing page:** [landing-page/](landing-page/) — deploy to GitHub Pages for privacy/terms URLs.
+
+See [docs/PLAY_STORE_SUBMISSION.md](docs/PLAY_STORE_SUBMISSION.md) and [BETA_TESTING_GUIDE.md](BETA_TESTING_GUIDE.md) for launch steps.
 
 ### Code Quality
 
@@ -264,6 +273,7 @@ community_posts (user_id, content, type, likes, comments)
 - [x] Community feed and interactions
 
 ### **Phase 2 (In Progress)**
+- [x] Play Store launch prep (Sprint 8 — `com.poetik.app`, EAS builds, landing page)
 - [ ] Voice-based poetry creation (speech-to-text)
 - [ ] Multi-language poetry translation
 - [ ] Advanced AI critique with style analysis

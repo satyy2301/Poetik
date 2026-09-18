@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
-import { checkRateLimit } from './abuseService';
+import { checkRateLimit, isUserBlocked } from './abuseService';
 import { detectSpam } from '../utils/spamDetection';
+import { trackEvent } from '../utils/analytics';
+import { captureException } from '../utils/errorTracking';
 import {
   FetchPoemsParams,
   FetchPoemsResult,
@@ -148,6 +150,11 @@ export const publishPoem = async (
   }
 
   if (userId) {
+    const blocked = await isUserBlocked(userId);
+    if (blocked) {
+      throw new Error('Your account is restricted from publishing. Contact support.');
+    }
+
     const allowed = await checkRateLimit(userId, 'publish_poem', 5, 60);
     if (!allowed) {
       throw new Error('Rate limit exceeded. Try again in an hour.');
@@ -166,7 +173,16 @@ export const publishPoem = async (
     .select(POEM_SELECT)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    captureException(error, { action: 'publish_poem' });
+    throw error;
+  }
+
+  trackEvent('publish_poem', {
+    poem_id: data.id,
+    visibility: data.visibility || 'pending',
+  });
+
   return normalizeAuthor(data);
 };
 

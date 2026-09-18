@@ -1,6 +1,7 @@
 // src/navigation/RootNavigator.tsx
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationState } from '@react-navigation/native';
+import { trackScreen } from '../utils/analytics';
 import { useAuth } from '../context/AuthContext';
 import AppNavigator from './AppNavigator';
 import LoginScreen from '../screens/LoginScreen';
@@ -20,6 +21,15 @@ const PublicPlaylistScreen = deferScreen(() => import('../screens/PublicPlaylist
 
 const Stack = createNativeStackNavigator();
 
+const getActiveRouteName = (state: NavigationState | undefined): string | undefined => {
+  if (!state) return undefined;
+  const route = state.routes[state.index];
+  if (route.state) {
+    return getActiveRouteName(route.state as NavigationState);
+  }
+  return route.name;
+};
+
 const RootNavigator = () => {
   const { user, isLoading } = useAuth();
 
@@ -28,7 +38,12 @@ const RootNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      onStateChange={(state) => {
+        const routeName = getActiveRouteName(state);
+        if (routeName) trackScreen(routeName);
+      }}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           <>

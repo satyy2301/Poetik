@@ -2,6 +2,7 @@
 // Deploy: supabase functions deploy ai-writing-tools
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { checkRateLimit, rateLimitResponse } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,15 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  const clientKey = req.headers.get('x-forwarded-for') || 'anonymous';
+  const rateLimit = checkRateLimit(`ai-writing-tools:${clientKey}`, {
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetAt);
   }
 
   try {

@@ -19,9 +19,9 @@ export const updateStreak = (
     return { streak: currentStreak || 1, lastActivityDate: today, isNewDay: false };
   }
 
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const todayDate = new Date(`${today}T12:00:00Z`);
+  todayDate.setUTCDate(todayDate.getUTCDate() - 1);
+  const yesterdayStr = todayDate.toISOString().slice(0, 10);
 
   if (lastActivityDate === yesterdayStr) {
     return {

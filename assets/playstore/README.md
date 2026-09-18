@@ -1,6 +1,6 @@
 # Play Store Assets
 
-Place final production assets here before Sprint 8 submission.
+Sprint 8 placeholder assets are committed. Replace with final marketing graphics before production submission.
 
 ## Required
 

@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
 import { hapticMedium } from '../utils/haptics';
+import ReportModal from './ReportModal';
 
 const formatTimestamp = (dateStr?: string) => {
   if (!dateStr) return '';
@@ -51,6 +52,7 @@ const PoemCard = ({
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const animateHeart = () => {
@@ -107,6 +109,18 @@ const PoemCard = ({
     }
   };
 
+  const handleMoreOptions = (e?: any) => {
+    e?.stopPropagation?.();
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to report content');
+      return;
+    }
+    Alert.alert('Poem options', undefined, [
+      { text: 'Report', onPress: () => setShowReportModal(true) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   const handleShare = async (e?: any) => {
     e?.stopPropagation?.();
     try {
@@ -151,7 +165,10 @@ const PoemCard = ({
               </Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={handleMoreOptions}
+          >
             <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -299,6 +316,16 @@ const PoemCard = ({
             </View>
           </View>
         </Modal>
+
+        {user && (
+          <ReportModal
+            visible={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            reporterId={user.id}
+            targetType="poem"
+            targetId={poem.id}
+          />
+        )}
       </View>
     </TouchableOpacity>
   );

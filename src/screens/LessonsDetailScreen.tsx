@@ -24,6 +24,7 @@ import StackHeader from '../components/ui/StackHeader';
 import Button from '../components/ui/Button';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import { hapticLight, hapticSuccess } from '../utils/haptics';
+import { trackEvent } from '../utils/analytics';
 
 const LessonsDetailScreen = ({ route, navigation }: any) => {
   const { lessonId } = route.params;
@@ -91,6 +92,7 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
     if (!user || !lesson) return;
     const xpReward = lesson.xp_reward || 25;
     await completeLesson(user.id, lesson.id, xpReward);
+    trackEvent('lesson_complete', { lesson_id: lesson.id, xp: xpReward });
     await addXp(xpReward);
     await refresh();
     await checkAchievements();

@@ -38,4 +38,10 @@ Everyone
 
 ## Package Name
 
-`com.yourname.poetik` — update in `app.json` before submission.
+`com.poetik.app`
+
+## Hosted Legal URLs
+
+- Privacy: https://satyy2301.github.io/Poetik/privacy.html
+- Terms: https://satyy2301.github.io/Poetik/terms.html
+- Landing page: https://satyy2301.github.io/Poetik/

@@ -11,7 +11,11 @@
     "ingest:poems": "node scripts/ingestPoems.js",
     "seed:challenges": "node scripts/seedChallenges.js",
     "db:push": "node scripts/dbPush.js",
-    "build": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res"
+    "build": "react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:production": "eas build --platform android --profile production",
+    "coverage": "jest --coverage",
+    "analyze:bundle": "npx react-native-bundle-visualizer"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",

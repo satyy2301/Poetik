@@ -14,6 +14,7 @@ import QuizQuestion from '../components/QuizQuestion';
 import { getQuizById, submitQuizResult } from '../services/quizService';
 import { Quiz } from '../types/lesson';
 import XPGainToast from '../components/XPGainToast';
+import { trackEvent } from '../utils/analytics';
 
 const QuizDetailScreen = ({ route, navigation }: any) => {
   const { quizId } = route.params;
@@ -50,6 +51,7 @@ const QuizDetailScreen = ({ route, navigation }: any) => {
       const res = await submitQuizResult(user.id, quiz.id, numericAnswers, quiz.questions);
       setResult(res);
       setSubmitted(true);
+      trackEvent('quiz_complete', { quiz_id: quiz.id, score: res.score, xp: res.xpEarned });
       await addXp(res.xpEarned);
       await refresh();
     } catch (error) {

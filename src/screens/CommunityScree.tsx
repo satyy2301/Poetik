@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { addFavoritePoem } from '../features/favorites/favoritesService';
+import { detectSpam } from '../utils/spamDetection';
 
 const CommunityScreen = () => {
   const { user } = useAuth();
@@ -124,7 +125,13 @@ const CommunityScreen = () => {
       Alert.alert('Empty Post', 'Please write something before posting');
       return;
     }
-    
+
+    const spam = detectSpam(newPostContent);
+    if (spam.isSpam) {
+      Alert.alert('Content blocked', spam.reasons.join(', '));
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('community_posts')
