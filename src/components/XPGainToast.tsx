@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
 type XPGainToastProps = {
   amount: number | null;
@@ -40,14 +41,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     alignSelf: 'center',
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
     zIndex: 100,
     elevation: 8,
   },
-  text: { color: 'white', fontWeight: '700', fontSize: 16 },
+  text: { color: palette.ink, fontWeight: '700', fontSize: 16 },
 });
 
 export default XPGainToast;

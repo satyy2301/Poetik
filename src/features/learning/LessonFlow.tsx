@@ -7,7 +7,8 @@ import ProgressDots from './ProgressDots';
 import { supabase } from '../../lib/supabase';
 import { useUser } from '../../context/UserContext';
 import { FEATURES } from '../../config/features';
-import ComingSoonBanner from '../../components/ComingSoonBanner';
+import QuizStep from '../../components/lesson-steps/QuizStep';
+import { palette } from '../../theme/tokens/colors';
 
 const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => void }) => {
   const { user } = useUser();
@@ -107,27 +108,25 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
                   {isLoading ? 'Analyzing...' : 'Get AI Feedback'}
                 </Text>
               </TouchableOpacity>
-            ) : (
-              <>
-                <TouchableOpacity style={[styles.feedbackButton, styles.feedbackButtonDisabled]} disabled>
-                  <Text style={styles.feedbackButtonText}>Get AI Feedback</Text>
-                </TouchableOpacity>
-                <ComingSoonBanner
-                  compact
-                  message="AI lesson feedback will return in a future update."
-                />
-              </>
-            )}
+            ) : null}
           </View>
         );
       
-      case 'quiz':
+      case 'quiz': {
+        const correct = currentStep.metadata?.correctAnswers || [];
+        const options = correct.length ? [...correct, 'None of these'] : [];
         return (
-          <View>
-            <Text style={styles.stepContent}>{currentStep.content}</Text>
-            {/* Quiz implementation would go here */}
-          </View>
+          <QuizStep
+            step={{
+              type: 'quiz',
+              content: currentStep.content,
+              question: currentStep.content,
+              options,
+              answerIndex: 0,
+            }}
+          />
         );
+      }
       
       default:
         return null;
@@ -163,7 +162,7 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
           onPress={handleNext}
           disabled={FEATURES.AI_ENABLED && currentStep.type === 'interactive' && !feedback}
         >
-          <Text style={styles.navButtonText}>
+          <Text style={[styles.navButtonText, styles.nextButtonText]}>
             {currentStepIndex === lesson.steps.length - 1 ? 'Complete' : 'Next'}
           </Text>
         </TouchableOpacity>
@@ -175,7 +174,7 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
   },
   scrollContainer: {
     padding: 20,
@@ -185,10 +184,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   stepContainer: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 20,
     marginBottom: 20,
@@ -196,52 +195,53 @@ const styles = StyleSheet.create({
   stepContent: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#34495e',
+    color: palette.onSurface,
     marginBottom: 15,
   },
   exampleContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderLeftWidth: 3,
-    borderLeftColor: '#3498db',
+    borderLeftColor: palette.emerald,
     padding: 15,
     marginVertical: 10,
   },
   exampleText: {
     fontStyle: 'italic',
-    color: '#7f8c8d',
+    color: palette.glacial,
   },
   responseInput: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: palette.border,
     borderRadius: 8,
     padding: 15,
     marginTop: 15,
     fontSize: 16,
+    color: palette.parchment,
     textAlignVertical: 'top',
   },
   feedbackButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: palette.emerald,
     padding: 15,
     borderRadius: 8,
     marginTop: 15,
     alignItems: 'center',
   },
   feedbackButtonDisabled: {
-    backgroundColor: '#bdc3c7',
+    backgroundColor: palette.ghost,
     opacity: 0.8,
   },
   feedbackButtonText: {
-    color: 'white',
+    color: palette.ink,
     fontWeight: 'bold',
   },
   navigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 15,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
+    borderTopColor: palette.border,
   },
   navButton: {
     paddingVertical: 12,
@@ -249,12 +249,15 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   nextButton: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
     marginLeft: 'auto',
   },
   navButtonText: {
-    color: 'white',
+    color: palette.parchment,
     fontWeight: 'bold',
+  },
+  nextButtonText: {
+    color: palette.ink,
   },
 });
 

@@ -15,6 +15,7 @@ import {
   updateReportStatus,
 } from '../../services/abuseService';
 import { useTheme } from '../../context/ThemeContext';
+import { palette } from '../../theme/tokens/colors';
 
 const ReportsScreen = () => {
   const { theme } = useTheme();
@@ -108,7 +109,7 @@ const ReportsScreen = () => {
               </TouchableOpacity>
               {item.target_type === 'user' && (
                 <TouchableOpacity
-                  style={[styles.btn, { backgroundColor: '#c0392b' }]}
+                  style={[styles.btn, { backgroundColor: palette.errorContainer }]}
                   onPress={() => confirmBlock(item)}
                 >
                   <Text style={styles.btnText}>Block</Text>
@@ -140,7 +141,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, marginBottom: 12 },
   actions: { flexDirection: 'row', gap: 8 },
   btn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  btnText: { color: 'white', fontWeight: '600' },
+  btnText: { color: palette.parchment, fontWeight: '600' },
 });
 
 export default ReportsScreen;

@@ -15,6 +15,7 @@ import { getQuizById, submitQuizResult } from '../services/quizService';
 import { Quiz } from '../types/lesson';
 import XPGainToast from '../components/XPGainToast';
 import { trackEvent } from '../utils/analytics';
+import { palette } from '../theme/tokens/colors';
 
 const QuizDetailScreen = ({ route, navigation }: any) => {
   const { quizId } = route.params;
@@ -69,7 +70,7 @@ const QuizDetailScreen = ({ route, navigation }: any) => {
   if (loading || !quiz) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -118,44 +119,44 @@ const QuizDetailScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, paddingBottom: 40 },
-  title: { fontSize: 22, fontWeight: '700', color: '#2c3e50' },
-  subtitle: { color: '#7f8c8d', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '700', color: palette.parchment },
+  subtitle: { color: palette.glacial, marginBottom: 16 },
   submitButton: {
-    backgroundColor: '#0984e3',
+    backgroundColor: palette.emerald,
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 8,
   },
-  submitText: { color: 'white', fontWeight: '700' },
+  submitText: { color: palette.ink, fontWeight: '700' },
   resultCard: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 16,
     marginTop: 12,
     alignItems: 'center',
   },
-  resultTitle: { fontSize: 20, fontWeight: '700', color: '#2c3e50' },
-  resultXp: { color: '#f39c12', marginTop: 8, fontWeight: '600' },
+  resultTitle: { fontSize: 20, fontWeight: '700', color: palette.parchment },
+  resultXp: { color: palette.mint, marginTop: 8, fontWeight: '600' },
   retryButton: {
     marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: palette.border,
   },
-  retryText: { color: '#2c3e50', fontWeight: '600' },
+  retryText: { color: palette.parchment, fontWeight: '600' },
   doneButton: {
     marginTop: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
   },
-  doneText: { color: 'white', fontWeight: '700' },
+  doneText: { color: palette.ink, fontWeight: '700' },
 });
 
 export default QuizDetailScreen;

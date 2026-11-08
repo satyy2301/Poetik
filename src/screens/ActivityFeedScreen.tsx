@@ -12,6 +12,7 @@ import {
   ActivityEvent,
 } from '../services/activityService';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
+import { palette } from '../theme/tokens/colors';
 
 type FeedFilter = 'own' | 'friends' | 'all';
 
@@ -104,21 +105,21 @@ const ActivityFeedScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   filters: { flexDirection: 'row', padding: 12, gap: 8 },
-  filterBtn: { flex: 1, paddingVertical: 8, borderRadius: 20, backgroundColor: 'white', alignItems: 'center' },
-  filterActive: { backgroundColor: '#3498db' },
-  filterText: { color: '#636e72', fontWeight: '600', fontSize: 13 },
-  filterTextActive: { color: 'white' },
-  row: { flexDirection: 'row', padding: 16, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#f1f1f1' },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#3498db', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  avatarText: { color: 'white', fontWeight: '700' },
+  filterBtn: { flex: 1, paddingVertical: 8, borderRadius: 20, backgroundColor: palette.spruce, alignItems: 'center' },
+  filterActive: { backgroundColor: palette.emerald },
+  filterText: { color: palette.ghost, fontWeight: '600', fontSize: 13 },
+  filterTextActive: { color: palette.ink },
+  row: { flexDirection: 'row', padding: 16, backgroundColor: palette.spruce, borderBottomWidth: 1, borderBottomColor: palette.border },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.emerald, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  avatarText: { color: palette.ink, fontWeight: '700' },
   content: { flex: 1 },
-  text: { color: '#2c3e50', lineHeight: 20 },
+  text: { color: palette.parchment, lineHeight: 20 },
   name: { fontWeight: '700' },
-  time: { color: '#bdc3c7', fontSize: 11, marginTop: 4 },
-  empty: { textAlign: 'center', color: '#95a5a6', marginTop: 40 },
+  time: { color: palette.ghost, fontSize: 11, marginTop: 4 },
+  empty: { textAlign: 'center', color: palette.ghost, marginTop: 40 },
 });
 
 export default ActivityFeedScreen;

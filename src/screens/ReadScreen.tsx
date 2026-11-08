@@ -114,6 +114,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
         onAuthorPress={() => handleViewAuthor(item.author as { id: string; name?: string })}
         onLike={() => handleLike(item.id)}
         onComment={() => handleViewPoem(item)}
+        onRemove={(poemId) => setPoems((prev) => prev.filter((poem) => poem.id !== poemId))}
       />
     ),
     [navigation],

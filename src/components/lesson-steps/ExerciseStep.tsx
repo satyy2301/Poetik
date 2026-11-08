@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { LessonStepData } from '../../types/lesson';
+import { palette } from '../../theme/tokens/colors';
 
 type ExerciseStepProps = {
   step: LessonStepData;
@@ -24,17 +25,17 @@ const ExerciseStep = ({ step, value, onChange }: ExerciseStepProps) => (
 );
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: 'white', borderRadius: 12, padding: 16 },
-  title: { fontSize: 18, fontWeight: '700', color: '#2c3e50', marginBottom: 10 },
-  prompt: { fontSize: 16, lineHeight: 24, color: '#34495e', marginBottom: 12 },
+  container: { backgroundColor: palette.spruce, borderRadius: 12, padding: 16 },
+  title: { fontSize: 18, fontWeight: '700', color: palette.parchment, marginBottom: 10 },
+  prompt: { fontSize: 16, lineHeight: 24, color: palette.onSurface, marginBottom: 12 },
   input: {
     minHeight: 120,
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: palette.onSurfaceVariant,
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fafbfc',
+    backgroundColor: palette.canvas,
   },
 });
 

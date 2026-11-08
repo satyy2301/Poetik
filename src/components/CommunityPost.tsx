@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { palette } from '../theme/tokens/colors';
 
 type CommunityPostProps = {
   post: any;
@@ -42,18 +43,18 @@ const CommunityPost = ({ post, currentUserId }: CommunityPostProps) => {
           <MaterialIcons 
             name={isLiked ? "favorite" : "favorite-outline"} 
             size={24} 
-            color={isLiked ? "#e74c3c" : "#95a5a6"} 
+            color={isLiked ? palette.error : palette.ghost} 
           />
           <Text style={styles.actionText}>{post.likes_count || 0}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.actionButton}>
-          <MaterialIcons name="chat-bubble-outline" size={24} color="#95a5a6" />
+          <MaterialIcons name="chat-bubble-outline" size={24} color={palette.ghost} />
           <Text style={styles.actionText}>{post.comments_count || 0}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.actionButton}>
-          <MaterialIcons name="share" size={24} color="#95a5a6" />
+          <MaterialIcons name="share" size={24} color={palette.ghost} />
         </TouchableOpacity>
       </View>
     </View>
@@ -67,11 +68,11 @@ const formatTime = (_dateString: string) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 15,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: palette.canvas,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
   },
   timeAgo: {
     fontSize: 12,
-    color: '#95a5a6',
+    color: palette.ghost,
   },
   content: {
     fontSize: 16,
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   poemContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
@@ -114,14 +115,14 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   poemContent: {
-    color: '#34495e',
+    color: palette.onSurface,
     lineHeight: 20,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     borderTopWidth: 1,
-    borderTopColor: '#ecf0f1',
+    borderTopColor: palette.border,
     paddingTop: 10,
     marginTop: 5,
   },
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     marginLeft: 5,
-    color: '#95a5a6',
+    color: palette.ghost,
   },
 });
 

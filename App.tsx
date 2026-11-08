@@ -14,6 +14,7 @@ import { initAnalytics } from './src/utils/analytics';
 import { initErrorTracking } from './src/utils/errorTracking';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import Constants from 'expo-constants';
+import { palette } from './src/theme/tokens/colors';
 
 const extra = Constants.expoConfig?.extra || {};
 
@@ -28,14 +29,17 @@ export default function App() {
   const [fontsLoaded] = useFonts({
     'Inter-Regular': require('./assets/fonts/Inter-Regular.ttf'),
     'Inter-Bold': require('./assets/fonts/Inter-Bold.ttf'),
-    'PlayfairDisplay-Regular': require('./assets/fonts/PlayfairDisplay-Regular.ttf'),
-    'PlayfairDisplay-VariableFont_wght': require('./assets/fonts/PlayfairDisplay-VariableFont_wght.ttf'),
+    'Newsreader-Regular': require('./assets/fonts/Newsreader-Regular.ttf'),
+    'Newsreader-Italic': require('./assets/fonts/Newsreader-Italic.ttf'),
+    'JetBrainsMono-Medium': require('./assets/fonts/JetBrainsMono-Medium.ttf'),
+    'PlayfairDisplay-Regular': require('./assets/fonts/Newsreader-Regular.ttf'),
+    'PlayfairDisplay-VariableFont_wght': require('./assets/fonts/Newsreader-Regular.ttf'),
   });
 
   if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: palette.ink }}>
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -49,7 +53,7 @@ export default function App() {
               <UserProvider>
                 <ProgressProvider>
                   <NotificationProvider>
-                    <StatusBar style="auto" />
+                    <StatusBar style="light" />
                     <RootNavigator />
                   </NotificationProvider>
                 </ProgressProvider>

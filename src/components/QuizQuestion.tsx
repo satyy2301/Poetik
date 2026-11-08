@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import { QuizQuestion as QuizQuestionType } from '../types/lesson';
+import { palette } from '../theme/tokens/colors';
 
 type QuizQuestionProps = {
   question: QuizQuestionType;
@@ -69,28 +70,28 @@ const QuizQuestion = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
-  number: { color: '#95a5a6', fontSize: 12, marginBottom: 6 },
-  question: { fontSize: 17, fontWeight: '700', color: '#2c3e50', marginBottom: 12 },
+  number: { color: palette.ghost, fontSize: 12, marginBottom: 6 },
+  question: { fontSize: 17, fontWeight: '700', color: palette.parchment, marginBottom: 12 },
   option: {
     padding: 12,
     borderRadius: 10,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
   },
-  selected: { borderColor: '#3498db', backgroundColor: '#ebf5fb' },
-  correct: { borderColor: '#2ecc71', backgroundColor: '#e8f8f0' },
-  wrong: { borderColor: '#e74c3c', backgroundColor: '#fdecea' },
-  optionText: { color: '#2c3e50', fontSize: 15 },
+  selected: { borderColor: palette.emerald, backgroundColor: palette.veil },
+  correct: { borderColor: palette.emerald, backgroundColor: palette.malachite },
+  wrong: { borderColor: palette.error, backgroundColor: palette.errorContainer },
+  optionText: { color: palette.parchment, fontSize: 15 },
   input: {
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: palette.onSurfaceVariant,
     borderRadius: 10,
     padding: 12,
     fontSize: 16,

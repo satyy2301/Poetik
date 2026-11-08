@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { palette } from '../theme/tokens/colors';
 
 type AIFeedbackProps = {
   feedback: string;
@@ -12,7 +13,7 @@ const AIFeedback = ({ feedback, scores }: AIFeedbackProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <MaterialIcons name="auto-awesome" size={20} color="#f1c40f" />
+        <MaterialIcons name="auto-awesome" size={20} color={palette.mint} />
         <Text style={styles.headerText}>AI Feedback</Text>
       </View>
       
@@ -42,12 +43,12 @@ const AIFeedback = ({ feedback, scores }: AIFeedbackProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 15,
     marginTop: 20,
     borderLeftWidth: 3,
-    borderLeftColor: '#3498db',
+    borderLeftColor: palette.emerald,
   },
   header: {
     flexDirection: 'row',
@@ -57,11 +58,11 @@ const styles = StyleSheet.create({
   headerText: {
     marginLeft: 8,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   feedbackText: {
     lineHeight: 22,
-    color: '#34495e',
+    color: palette.onSurface,
   },
   scoresContainer: {
     marginTop: 15,
@@ -74,24 +75,24 @@ const styles = StyleSheet.create({
   scoreCategory: {
     width: 100,
     fontWeight: '500',
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   scoreBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#dfe6e9',
+    backgroundColor: palette.onSurfaceVariant,
     borderRadius: 4,
     overflow: 'hidden',
     marginHorizontal: 10,
   },
   scoreFill: {
     height: '100%',
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
   },
   scoreValue: {
     width: 40,
     textAlign: 'right',
-    color: '#7f8c8d',
+    color: palette.glacial,
   },
 });
 

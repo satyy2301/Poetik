@@ -15,10 +15,12 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useResponsive } from '../hooks/useResponsive';
 import EmptyState from '../components/ui/EmptyState';
+import FolioHeader from '../components/ui/FolioHeader';
 import ChatScreen from './ChatScreen';
 import { getConversations } from '../features/messaging/messagingService';
 import { supabase } from '../lib/supabase';
 import { hapticLight } from '../utils/haptics';
+import { palette } from '../theme/tokens/colors';
 
 type Conversation = {
   other: { id: string; name: string; avatar_url?: string };
@@ -116,7 +118,7 @@ const MessagesScreen = () => {
           styles.row,
           {
             backgroundColor: isActive ? colors.cardHeaderTint : colors.bgSurface,
-            borderBottomColor: colors.borderMuted,
+            borderColor: colors.borderMuted,
           },
         ]}
         onPress={() => openChat(item.other)}
@@ -162,6 +164,10 @@ const MessagesScreen = () => {
   }
 
   const inboxList = (
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <FolioHeader kicker="MESSAGES" title="Messages" sentence="Notes between poets." />
+      </View>
     <FlatList
       data={conversations}
       keyExtractor={(item) => item.other.id}
@@ -183,6 +189,7 @@ const MessagesScreen = () => {
       }
       renderItem={renderConversation}
     />
+    </View>
   );
 
   if (!isMobile) {
@@ -223,7 +230,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
     gap: 12,
   },
   avatar: { width: 48, height: 48, borderRadius: 24 },
@@ -234,7 +244,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 18 },
+  avatarText: { color: palette.parchment, fontWeight: '700', fontSize: 18 },
   rowContent: { flex: 1 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowBottom: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
@@ -247,7 +257,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     paddingHorizontal: 4,
   },
-  unreadText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  unreadText: { color: palette.parchment, fontSize: 10, fontWeight: '700' },
 });
 
 export default MessagesScreen;

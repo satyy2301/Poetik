@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Achievement } from '../types/achievement';
 import { hapticSuccess } from '../utils/animations';
+import { palette } from '../theme/tokens/colors';
 
 type AchievementToastProps = {
   achievement: Achievement | null;
@@ -51,7 +52,7 @@ const AchievementToast = ({ achievement, onDone }: AchievementToastProps) => {
   return (
     <Animated.View style={[styles.toast, { opacity, transform: [{ scale }] }]}>
       <View style={styles.iconWrap}>
-        <Ionicons name={iconName} size={28} color="#f39c12" />
+        <Ionicons name={iconName} size={28} color={palette.mint} />
       </View>
       <View style={styles.textWrap}>
         <Text style={styles.title}>Achievement Unlocked!</Text>
@@ -70,7 +71,7 @@ const styles = StyleSheet.create({
     top: 60,
     left: 16,
     right: 16,
-    backgroundColor: '#2c3e50',
+    backgroundColor: palette.spruce,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
@@ -82,15 +83,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#fef5e7',
+    backgroundColor: palette.malachite,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   textWrap: { flex: 1 },
-  title: { color: '#f39c12', fontSize: 12, fontWeight: '700', marginBottom: 2 },
-  name: { color: 'white', fontSize: 16, fontWeight: '700' },
-  xp: { color: '#2ecc71', fontSize: 13, marginTop: 4, fontWeight: '600' },
+  title: { color: palette.mint, fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  name: { color: palette.parchment, fontSize: 16, fontWeight: '700' },
+  xp: { color: palette.emerald, fontSize: 13, marginTop: 4, fontWeight: '600' },
 });
 
 export default AchievementToast;

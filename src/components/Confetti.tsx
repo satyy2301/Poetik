@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, View } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
-const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+const COLORS = [palette.error, palette.emerald, palette.emerald, palette.mint, palette.sage, palette.mint];
 const PARTICLE_COUNT = 24;
 const { width } = Dimensions.get('window');
 

@@ -26,6 +26,13 @@ const POEM_SELECT = `
 
 const DEFAULT_LIMIT = 20;
 
+const themeContainsFilter = (theme: string) => {
+  const variants = Array.from(new Set([theme, theme.toLowerCase(), theme.toUpperCase()]));
+  return variants
+    .map((value) => `themes.cs.{${/\s/.test(value) ? `"${value}"` : value}}`)
+    .join(',');
+};
+
 const normalizeAuthor = (poem: any): Poem => ({
   ...poem,
   author: poem.author || { id: poem.author_id, name: 'Unknown Author' },
@@ -62,8 +69,8 @@ export const fetchPoems = async ({
     }
     query = query.in('author_id', filters.followingIds);
   }
-  if (filters.era) query = query.eq('era', filters.era);
-  if (filters.theme) query = query.contains('themes', [filters.theme]);
+  if (filters.era) query = query.ilike('era', filters.era);
+  if (filters.theme) query = query.or(themeContainsFilter(filters.theme));
   if (filters.form) query = query.ilike('form', filters.form);
   if (filters.authorId) query = query.eq('author_id', filters.authorId);
 
@@ -166,7 +173,7 @@ export const publishPoem = async (
     .insert([
       {
         ...poem,
-        visibility: poem.visibility || 'pending',
+        visibility: poem.visibility || 'public',
         like_count: 0,
       },
     ])
@@ -184,6 +191,65 @@ export const publishPoem = async (
   });
 
   return normalizeAuthor(data);
+};
+
+export const updatePoem = async (
+  poemId: string,
+  userId: string,
+  patch: Pick<Poem, 'title' | 'content' | 'themes' | 'form'>,
+) => {
+  const spam = detectSpam(patch.content);
+  if (spam.isSpam) {
+    throw new Error(`Content flagged: ${spam.reasons.join(', ')}`);
+  }
+
+  const { data, error } = await supabase
+    .from('poems')
+    .update({
+      title: patch.title,
+      content: patch.content,
+      themes: patch.themes,
+      form: patch.form,
+    })
+    .eq('id', poemId)
+    .eq('author_id', userId)
+    .select(POEM_SELECT)
+    .single();
+
+  if (error) {
+    captureException(error, { action: 'update_poem' });
+    throw error;
+  }
+
+  return normalizeAuthor(data);
+};
+
+export const deletePoem = async (poemId: string, userId: string) => {
+  const rpc = await supabase.rpc('delete_own_poem', { target_id: poemId });
+  const missingFn = rpc.error?.code === 'PGRST202' || /delete_own_poem/.test(rpc.error?.message || '');
+  if (!rpc.error) return;
+  if (!missingFn) {
+    captureException(rpc.error, { action: 'delete_poem' });
+    throw rpc.error;
+  }
+
+  const { data, error } = await supabase
+    .from('poems')
+    .delete()
+    .eq('id', poemId)
+    .eq('author_id', userId)
+    .select('id');
+
+  if (error) {
+    captureException(error, { action: 'delete_poem' });
+    throw error;
+  }
+
+  if (!data?.length) {
+    const blocked = new Error('The poem was not removed. The database refused the delete.');
+    captureException(blocked, { action: 'delete_poem', poemId });
+    throw blocked;
+  }
 };
 
 export const incrementPoemLikes = async (poemId: string) => {

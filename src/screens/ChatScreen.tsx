@@ -26,7 +26,6 @@ import {
   Message,
 } from '../features/messaging/messagingService';
 import { hapticLight } from '../utils/haptics';
-
 type ChatScreenProps = {
   embeddedUserId?: string;
   embeddedName?: string;
@@ -195,16 +194,16 @@ const ChatScreen = ({ embeddedUserId, embeddedName }: ChatScreenProps = {}) => {
                 ]}
               >
                 {m.message_type === 'poem' && m.poem ? (
-                  <Text style={[styles.bubbleText, { color: isMine ? '#fff' : colors.text }]}>
+                  <Text style={[styles.bubbleText, { color: isMine ? colors.onBrand : colors.text }]}>
                     {m.poem.title}
                   </Text>
                 ) : (
-                  <Text style={[styles.bubbleText, { color: isMine ? '#fff' : colors.text }]}>
+                  <Text style={[styles.bubbleText, { color: isMine ? colors.onBrand : colors.text }]}>
                     {m.content}
                   </Text>
                 )}
                 {m.edited_at && (
-                  <Text style={[styles.edited, { color: isMine ? '#dfe6e9' : colors.textSecondary }]}>
+                  <Text style={[styles.edited, { color: isMine ? colors.onBrand : colors.textSecondary }]}>
                     edited
                   </Text>
                 )}
@@ -216,7 +215,7 @@ const ChatScreen = ({ embeddedUserId, embeddedName }: ChatScreenProps = {}) => {
                     loadMessages();
                   }}
                 />
-                <Text style={[styles.time, { color: isMine ? '#dfe6e9' : colors.textSecondary }]}>
+                <Text style={[styles.time, { color: isMine ? colors.onBrand : colors.textSecondary }]}>
                   {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
@@ -240,7 +239,7 @@ const ChatScreen = ({ embeddedUserId, embeddedName }: ChatScreenProps = {}) => {
             onPress={handleSend}
             disabled={sending || !text.trim()}
           >
-            <Ionicons name="send" size={18} color="#fff" />
+            <Ionicons name="send" size={18} color={colors.onBrand} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

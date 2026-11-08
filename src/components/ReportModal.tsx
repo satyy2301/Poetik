@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { ReportTargetType, submitReport } from '../services/abuseService';
+import { palette } from '../theme/tokens/colors';
 
 const REASONS = [
   'Spam or misleading',
@@ -102,7 +103,7 @@ const ReportModal = ({
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={palette.ink} />
               ) : (
                 <Text style={styles.submitText}>Submit report</Text>
               )}
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     minWidth: 120,
     alignItems: 'center',
   },
-  submitText: { color: '#fff', fontWeight: '600' },
+  submitText: { color: palette.ink, fontWeight: '600' },
 });
 
 export default ReportModal;

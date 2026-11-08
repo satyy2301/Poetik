@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { captureException } from '../utils/errorTracking';
+import { palette } from '../theme/tokens/colors';
 
 type Props = {
   children: ReactNode;
@@ -50,28 +51,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: palette.canvas,
   },
   title: {
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: palette.parchment,
   },
   message: {
     fontSize: 15,
     textAlign: 'center',
-    color: '#666',
+    color: palette.glacial,
     marginBottom: 20,
   },
   button: {
-    backgroundColor: '#6B4EFF',
+    backgroundColor: palette.emerald,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: palette.ink,
     fontWeight: '600',
   },
 });

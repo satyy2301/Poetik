@@ -15,6 +15,7 @@ import {
   getPendingVersions,
   rejectVersion,
 } from '../../services/moderationService';
+import { palette } from '../../theme/tokens/colors';
 
 const ModerationQueueScreen = () => {
   const { user } = useAuth();
@@ -64,7 +65,7 @@ const ModerationQueueScreen = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -107,39 +108,39 @@ const ModerationQueueScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa', padding: 16 },
+  container: { flex: 1, backgroundColor: palette.canvas, padding: 16 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '700', color: '#2c3e50' },
-  subtitle: { color: '#7f8c8d', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: '700', color: palette.parchment },
+  subtitle: { color: palette.glacial, marginBottom: 16 },
   list: { paddingBottom: 24 },
-  empty: { textAlign: 'center', color: '#95a5a6', marginTop: 40 },
+  empty: { textAlign: 'center', color: palette.ghost, marginTop: 40 },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
   },
-  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: '#2c3e50' },
-  cardContent: { color: '#34495e', lineHeight: 22, marginBottom: 12 },
+  cardTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, color: palette.parchment },
+  cardContent: { color: palette.onSurface, lineHeight: 22, marginBottom: 12 },
   actions: { flexDirection: 'row', gap: 10 },
   rejectButton: {
     flex: 1,
-    backgroundColor: '#fdecea',
+    backgroundColor: palette.errorContainer,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
-  rejectText: { color: '#e74c3c', fontWeight: '600' },
+  rejectText: { color: palette.error, fontWeight: '600' },
   approveButton: {
     flex: 1,
-    backgroundColor: '#e8f8f0',
+    backgroundColor: palette.malachite,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
-  approveText: { color: '#27ae60', fontWeight: '600' },
+  approveText: { color: palette.emerald, fontWeight: '600' },
 });
 
 export default ModerationQueueScreen;

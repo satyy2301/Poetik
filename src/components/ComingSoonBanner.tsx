@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
 type ComingSoonBannerProps = {
   message?: string;
@@ -20,10 +21,10 @@ const ComingSoonBanner = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f0f4f8',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: palette.onSurfaceVariant,
     padding: 16,
     alignItems: 'center',
   },
@@ -34,7 +35,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#636e72',
+    color: palette.ghost,
     marginBottom: 6,
   },
   titleCompact: {
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 14,
-    color: '#95a5a6',
+    color: palette.ghost,
     textAlign: 'center',
     lineHeight: 20,
   },

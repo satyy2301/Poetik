@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { palette } from '../../theme/tokens/colors';
 
 type ActivityChartProps = {
   data: number[];
@@ -28,24 +29,24 @@ const ActivityChart = ({ data, labels }: ActivityChartProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
-  title: { fontSize: 16, fontWeight: '700', color: '#2c3e50', marginBottom: 12 },
+  title: { fontSize: 16, fontWeight: '700', color: palette.parchment, marginBottom: 12 },
   chartRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   barCol: { flex: 1, alignItems: 'center', marginHorizontal: 2 },
   barTrack: {
     width: '80%',
     height: 80,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: palette.border,
     borderRadius: 6,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
-  barFill: { width: '100%', backgroundColor: '#0984e3', borderRadius: 6 },
-  barLabel: { fontSize: 10, color: '#95a5a6', marginTop: 4 },
+  barFill: { width: '100%', backgroundColor: palette.emerald, borderRadius: 6 },
+  barLabel: { fontSize: 10, color: palette.ghost, marginTop: 4 },
 });
 
 export default React.memo(ActivityChart);

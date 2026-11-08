@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { streakLabel } from '../utils/streakCalculator';
+import { palette } from '../theme/tokens/colors';
 
 type StreakCounterProps = {
   streak: number;
@@ -18,7 +19,7 @@ const StreakCounter = ({ streak, size = 'md' }: StreakCounterProps) => {
       <Ionicons
         name="flame"
         size={iconSize}
-        color={isActive ? '#e67e22' : '#bdc3c7'}
+        color={isActive ? palette.mint : palette.ghost}
       />
       <Text style={[styles.count, { fontSize }, !isActive && styles.inactive]}>
         {streak}
@@ -33,7 +34,7 @@ const StreakCounter = ({ streak, size = 'md' }: StreakCounterProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -45,13 +46,13 @@ const styles = StyleSheet.create({
   },
   count: {
     fontWeight: '800',
-    color: '#e67e22',
+    color: palette.mint,
     marginTop: 2,
   },
-  inactive: { color: '#95a5a6' },
+  inactive: { color: palette.ghost },
   label: {
     fontSize: 11,
-    color: '#7f8c8d',
+    color: palette.glacial,
     marginTop: 2,
     fontWeight: '600',
   },

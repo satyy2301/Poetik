@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { POEM_TEMPLATES, PoemTemplate } from '../data/poemTemplates';
+import { palette } from '../theme/tokens/colors';
 
 type TemplateSelectorProps = {
   visible: boolean;
@@ -80,51 +81,51 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   content: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
     maxHeight: '85%',
   },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#2c3e50' },
-  subtitle: { color: '#7f8c8d', marginBottom: 16 },
+  title: { fontSize: 22, fontWeight: 'bold', color: palette.parchment },
+  subtitle: { color: palette.glacial, marginBottom: 16 },
   row: { justifyContent: 'space-between', marginBottom: 10 },
   card: {
     width: '48%',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
   },
-  cardSelected: { borderColor: '#3498db', backgroundColor: '#ebf5fb' },
-  cardPreview: { borderColor: '#2ecc71' },
-  cardName: { fontWeight: '700', color: '#2c3e50', marginBottom: 4 },
-  cardDesc: { fontSize: 12, color: '#7f8c8d' },
+  cardSelected: { borderColor: palette.emerald, backgroundColor: palette.veil },
+  cardPreview: { borderColor: palette.emerald },
+  cardName: { fontWeight: '700', color: palette.parchment, marginBottom: 4 },
+  cardDesc: { fontSize: 12, color: palette.glacial },
   previewBox: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 12,
     padding: 14,
     marginTop: 12,
     maxHeight: 180,
   },
   previewTitle: { fontWeight: '700', fontSize: 16, marginBottom: 6 },
-  previewStructure: { color: '#636e72', fontSize: 13, marginBottom: 8 },
-  previewExample: { color: '#2c3e50', fontStyle: 'italic', lineHeight: 22 },
+  previewStructure: { color: palette.ghost, fontSize: 13, marginBottom: 8 },
+  previewExample: { color: palette.parchment, fontStyle: 'italic', lineHeight: 22 },
   useBtn: {
-    backgroundColor: '#00b894',
+    backgroundColor: palette.jade,
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 12,
   },
-  useBtnText: { color: 'white', fontWeight: '700' },
+  useBtnText: { color: palette.ink, fontWeight: '700' },
   closeBtn: {
     marginTop: 12,
     padding: 12,
     alignItems: 'center',
   },
-  closeBtnText: { color: '#7f8c8d', fontWeight: '600' },
+  closeBtnText: { color: palette.glacial, fontWeight: '600' },
 });
 
 export default TemplateSelector;

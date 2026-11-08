@@ -20,6 +20,7 @@ import {
   FollowUser,
 } from '../services/followService';
 import { openAuthorProfile } from '../navigation/navigationHelpers';
+import { palette } from '../theme/tokens/colors';
 
 const FollowingScreen = () => {
   const navigation = useNavigation<any>();
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 17, fontWeight: '700', marginTop: 16, textAlign: 'center' },
   emptyHint: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
   ctaBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  ctaText: { color: '#fff', fontWeight: '700' },
+  ctaText: { color: palette.ink, fontWeight: '700' },
   suggestions: { borderTopWidth: 1, marginTop: 8 },
   suggestionsTitle: { fontSize: 15, fontWeight: '700', padding: 16, paddingBottom: 4 },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LessonStepData } from '../../types/lesson';
+import { palette } from '../../theme/tokens/colors';
 
 type QuizStepProps = {
   step: LessonStepData;
@@ -49,20 +50,20 @@ const QuizStep = ({ step, onAnswered }: QuizStepProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: 'white', borderRadius: 12, padding: 16 },
-  title: { fontSize: 17, fontWeight: '700', color: '#2c3e50', marginBottom: 14 },
+  container: { backgroundColor: palette.spruce, borderRadius: 12, padding: 16 },
+  title: { fontSize: 17, fontWeight: '700', color: palette.parchment, marginBottom: 14 },
   option: {
     padding: 12,
     borderRadius: 10,
-    backgroundColor: '#f1f3f5',
+    backgroundColor: palette.spruce,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
   },
-  correct: { backgroundColor: '#e8f8f0', borderColor: '#2ecc71' },
-  wrong: { backgroundColor: '#fdecea', borderColor: '#e74c3c' },
-  optionText: { color: '#2c3e50', fontSize: 15 },
-  feedback: { marginTop: 8, color: '#636e72', fontStyle: 'italic' },
+  correct: { backgroundColor: palette.malachite, borderColor: palette.emerald },
+  wrong: { backgroundColor: palette.errorContainer, borderColor: palette.error },
+  optionText: { color: palette.parchment, fontSize: 15 },
+  feedback: { marginTop: 8, color: palette.ghost, fontStyle: 'italic' },
 });
 
 export default QuizStep;

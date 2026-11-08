@@ -46,10 +46,10 @@ const HeaderIcons = () => {
         <Ionicons name="notifications-outline" size={24} color={colors.text} />
         {unreadCount > 0 && (
           <View style={{
-            position: 'absolute', top: -4, right: -4, backgroundColor: '#e74c3c',
+            position: 'absolute', top: -4, right: -4, backgroundColor: colors.errorContainer,
             borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center',
           }}>
-            <Text style={{ color: 'white', fontSize: 10, fontWeight: '700' }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 10, fontWeight: '700' }}>
               {unreadCount > 9 ? '9+' : unreadCount}
             </Text>
           </View>
@@ -88,20 +88,22 @@ const MainTabNavigator = () => {
           const iconName = icons[route.name] ?? 'ellipse-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarActiveTintColor: colors.brandSecondary,
+        tabBarInactiveTintColor: colors.accent,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          backgroundColor: colors.bgCanvas,
+          borderTopColor: colors.borderMuted,
         },
         headerStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.bgSurface,
+          borderBottomColor: colors.borderMuted,
+          borderBottomWidth: 1,
         },
-        headerTintColor: colors.text,
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: {
-          fontFamily: 'PlayfairDisplay-VariableFont_wght',
+          fontFamily: 'Newsreader-Regular',
           fontSize: 20,
-          fontWeight: 'bold',
+          fontWeight: '500',
         },
         headerRight: HeaderIcons,
       })}
@@ -122,14 +124,17 @@ const AppNavigator = () => {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.bgSurface,
+          borderBottomColor: colors.borderMuted,
+          borderBottomWidth: 1,
         },
-        headerTintColor: colors.text,
+        headerTintColor: colors.textPrimary,
         headerTitleStyle: {
-          fontFamily: 'PlayfairDisplay-VariableFont_wght',
+          fontFamily: 'Newsreader-Regular',
           fontSize: 18,
-          fontWeight: 'bold',
+          fontWeight: '500',
         },
+        cardStyle: { backgroundColor: colors.bgCanvas },
       }}
     >
       <Stack.Screen 

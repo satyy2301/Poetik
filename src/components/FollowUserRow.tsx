@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FollowUser } from '../services/followService';
 import { hapticLight } from '../utils/haptics';
+import { palette } from '../theme/tokens/colors';
 
 type Props = {
   user: FollowUser;
@@ -64,7 +65,7 @@ const FollowUserRow = ({
         <Text
           style={[
             styles.actionText,
-            { color: actionVariant === 'secondary' ? colors.text : '#fff' },
+            { color: actionVariant === 'secondary' ? colors.text : palette.parchment },
           ]}
         >
           {actionLabel}
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginRight: 12,
   },
-  avatarText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  avatarText: { color: palette.parchment, fontWeight: '700', fontSize: 16 },
   info: { flex: 1, marginRight: 8 },
   name: { fontWeight: '700', fontSize: 15 },
   bio: { fontSize: 13, marginTop: 2 },

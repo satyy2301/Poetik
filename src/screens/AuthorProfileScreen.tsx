@@ -29,6 +29,7 @@ import {
   getFollowCounts,
 } from '../services/followService';
 import ReportModal from '../components/ReportModal';
+import { palette } from '../theme/tokens/colors';
 
 const PAGE_SIZE = 20;
 
@@ -289,7 +290,7 @@ const AuthorProfileScreen = () => {
               <Text
                 style={[
                   styles.followButtonText,
-                  { color: following ? colors.textSecondary : '#fff' },
+                  { color: following ? colors.textSecondary : palette.parchment },
                 ]}
               >
                 {following ? 'Following' : 'Follow'}
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: { marginTop: 15, fontSize: 16 },
-  errorText: { fontSize: 16, color: '#e74c3c', marginBottom: 12 },
+  errorText: { fontSize: 16, color: palette.error, marginBottom: 12 },
   backLink: { fontWeight: '600' },
   header: {
     flexDirection: 'row',

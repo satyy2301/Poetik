@@ -1,6 +1,7 @@
 // src/features/learning/AIFeedbackWidget.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { palette } from '../../theme/tokens/colors';
 
 const AIFeedbackWidget = ({ feedback }: { feedback: string }) => {
   return (
@@ -27,15 +28,15 @@ const AIFeedbackWidget = ({ feedback }: { feedback: string }) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f0f7ff',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 15,
     borderLeftWidth: 4,
-    borderLeftColor: '#3498db',
+    borderLeftColor: palette.emerald,
   },
   header: {
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: palette.parchment,
     marginBottom: 10,
     fontSize: 16,
   },
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   feedbackText: {
-    color: '#34495e',
+    color: palette.onSurface,
     lineHeight: 22,
   },
   feedbackCategories: {
@@ -52,13 +53,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryPill: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: palette.veil,
     borderRadius: 15,
     paddingVertical: 4,
     paddingHorizontal: 12,
   },
   categoryText: {
-    color: '#1976d2',
+    color: palette.mint,
     fontSize: 12,
   },
 });

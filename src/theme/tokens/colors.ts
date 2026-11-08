@@ -1,25 +1,26 @@
 export const palette = {
-  indigo500: '#6366F1',
-  indigo600: '#4F46E5',
-  violet500: '#8B5CF6',
-  violet600: '#7C3AED',
-  cyan500: '#06B6D4',
-  amber500: '#F59E0B',
-  rose500: '#F43F5E',
-  emerald500: '#10B981',
-
-  parchment50: '#FAF8F5',
-  parchment100: '#F4EFEA',
-  parchment200: '#E8E1D7',
-  parchment700: '#5C5449',
-  parchment900: '#1C1917',
-
-  dark950: '#0B0D13',
-  dark900: '#121620',
-  dark800: '#1A202E',
-  dark700: '#262F42',
-  dark400: '#7E8B9F',
-  dark100: '#E2E8F0',
+  canvas: '#04110C',
+  canvasRaised: '#081611',
+  spruce: '#101E19',
+  malachite: '#162A22',
+  veil: '#1F392F',
+  surfaceBright: '#2E3C36',
+  parchment: '#F0FDF4',
+  onSurface: '#D6E6DD',
+  glacial: '#CBD5E1',
+  onSurfaceVariant: '#BBCABF',
+  ghost: '#4B6358',
+  border: '#133326',
+  borderBright: '#1B4534',
+  borderHairline: '#1E4738',
+  emerald: '#10B981',
+  mint: '#34D399',
+  jade: '#059669',
+  sage: '#A7F3D0',
+  ink: '#04110C',
+  error: '#FFB4AB',
+  onError: '#690005',
+  errorContainer: '#93000A',
 };
 
 export interface SemanticColors {
@@ -30,14 +31,19 @@ export interface SemanticColors {
   borderSubtle: string;
   textPrimary: string;
   textSecondary: string;
+  textMuted: string;
   brandPrimary: string;
   brandSecondary: string;
+  onBrand: string;
+  focus: string;
   likeHeart: string;
   bookmarkGold: string;
   cardHeaderTint: string;
   success: string;
   warning: string;
+  warningContainer: string;
   error: string;
+  errorContainer: string;
   // Backward-compat aliases
   primary: string;
   secondary: string;
@@ -49,54 +55,71 @@ export interface SemanticColors {
   gradient: string[];
 }
 
+const shared: Pick<
+  SemanticColors,
+  | 'brandPrimary'
+  | 'brandSecondary'
+  | 'onBrand'
+  | 'focus'
+  | 'likeHeart'
+  | 'bookmarkGold'
+  | 'success'
+  | 'warning'
+  | 'warningContainer'
+  | 'error'
+  | 'errorContainer'
+  | 'primary'
+  | 'secondary'
+  | 'accent'
+  | 'gradient'
+> = {
+  brandPrimary: palette.emerald,
+  brandSecondary: palette.mint,
+  onBrand: palette.ink,
+  focus: palette.mint,
+  likeHeart: palette.mint,
+  bookmarkGold: palette.sage,
+  success: palette.emerald,
+  warning: palette.mint,
+  warningContainer: palette.malachite,
+  error: palette.error,
+  errorContainer: palette.errorContainer,
+  primary: palette.emerald,
+  secondary: palette.mint,
+  accent: palette.sage,
+  gradient: [palette.emerald, palette.mint, palette.jade],
+};
+
 export const lightColors: SemanticColors = {
-  bgCanvas: palette.parchment50,
-  bgSurface: '#FFFFFF',
-  bgElevated: palette.parchment100,
-  borderMuted: palette.parchment200,
-  borderSubtle: '#D6CEBE',
-  textPrimary: palette.parchment900,
-  textSecondary: palette.parchment700,
-  brandPrimary: palette.indigo600,
-  brandSecondary: palette.violet600,
-  likeHeart: palette.rose500,
-  bookmarkGold: palette.amber500,
-  cardHeaderTint: 'rgba(99, 102, 241, 0.04)',
-  success: palette.emerald500,
-  warning: palette.amber500,
-  error: palette.rose500,
-  primary: palette.indigo600,
-  secondary: palette.violet600,
-  accent: palette.cyan500,
-  background: palette.parchment50,
-  surface: '#FFFFFF',
-  text: palette.parchment900,
-  border: palette.parchment200,
-  gradient: [palette.indigo600, palette.violet600, palette.cyan500],
+  ...shared,
+  bgCanvas: palette.canvasRaised,
+  bgSurface: palette.spruce,
+  bgElevated: palette.veil,
+  borderMuted: palette.borderBright,
+  borderSubtle: palette.borderHairline,
+  textPrimary: palette.parchment,
+  textSecondary: palette.onSurfaceVariant,
+  textMuted: palette.ghost,
+  cardHeaderTint: 'rgba(16, 185, 129, 0.12)',
+  background: palette.canvasRaised,
+  surface: palette.spruce,
+  text: palette.parchment,
+  border: palette.borderBright,
 };
 
 export const darkColors: SemanticColors = {
-  bgCanvas: palette.dark950,
-  bgSurface: palette.dark900,
-  bgElevated: palette.dark800,
-  borderMuted: palette.dark800,
-  borderSubtle: palette.dark700,
-  textPrimary: palette.dark100,
-  textSecondary: palette.dark400,
-  brandPrimary: palette.indigo500,
-  brandSecondary: palette.violet500,
-  likeHeart: palette.rose500,
-  bookmarkGold: palette.amber500,
-  cardHeaderTint: 'rgba(99, 102, 241, 0.08)',
-  success: palette.emerald500,
-  warning: palette.amber500,
-  error: palette.rose500,
-  primary: palette.indigo500,
-  secondary: palette.violet500,
-  accent: palette.cyan500,
-  background: palette.dark950,
-  surface: palette.dark900,
-  text: palette.dark100,
-  border: palette.dark800,
-  gradient: [palette.indigo500, palette.violet500, palette.cyan500],
+  ...shared,
+  bgCanvas: palette.canvas,
+  bgSurface: palette.spruce,
+  bgElevated: palette.malachite,
+  borderMuted: palette.border,
+  borderSubtle: palette.borderBright,
+  textPrimary: palette.parchment,
+  textSecondary: palette.glacial,
+  textMuted: palette.ghost,
+  cardHeaderTint: 'rgba(16, 185, 129, 0.08)',
+  background: palette.canvas,
+  surface: palette.spruce,
+  text: palette.parchment,
+  border: palette.border,
 };

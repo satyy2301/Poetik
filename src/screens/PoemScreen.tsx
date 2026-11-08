@@ -19,6 +19,7 @@ import { incrementPoemLikes } from '../services/poemService';
 import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
 import { openAuthorProfile, resolvePoemForDetail } from '../navigation/navigationHelpers';
 import { Poem } from '../types/poem';
+import FormattedText from '../components/FormattedText';
 
 const PoemScreen = () => {
   const navigation = useNavigation<any>();
@@ -66,8 +67,11 @@ const PoemScreen = () => {
 
   const themeDisplay =
     poemData.themes && poemData.themes.length > 0
-      ? poemData.themes[0]
-      : 'General';
+      ? poemData.themes.join(' · ')
+      : null;
+
+  const wordCount = poemData.word_count
+    || poemData.content.trim().split(/\s+/).filter(Boolean).length;
 
   const author = poemData.author;
   const authorName =
@@ -128,80 +132,78 @@ const PoemScreen = () => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.surface }]} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+    <ScrollView style={[styles.container, { backgroundColor: colors.bgCanvas }]} contentContainerStyle={styles.scroll}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        <Text style={[theme.typography.labelMono, { color: colors.accent, marginLeft: 8 }]}>FOLIO</Text>
       </TouchableOpacity>
 
-      <View style={[styles.poemContainer, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.themeTag, { backgroundColor: colors.border, color: colors.textSecondary }]}>
-          {themeDisplay}
-        </Text>
-        <Text style={[styles.title, { color: colors.text }]}>{poemData.title}</Text>
-        <Text style={[styles.content, { color: colors.text }]}>{poemData.content}</Text>
-        <TouchableOpacity onPress={handleAuthorPress}>
-          <Text style={[styles.author, { color: colors.primary }]}>— {authorName}</Text>
-        </TouchableOpacity>
+      <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>
+        {(poemData.form || 'VERSE').toUpperCase()}
+      </Text>
+      <Text style={[theme.typography.displaySm, { color: colors.textPrimary, marginTop: 8 }]}>{poemData.title}</Text>
+      <TouchableOpacity onPress={handleAuthorPress}>
+        <Text style={[theme.typography.bodyMd, { color: colors.brandSecondary, marginTop: 6 }]}>{authorName}</Text>
+      </TouchableOpacity>
+
+      <View style={[styles.well, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted, borderLeftColor: colors.brandPrimary }]}>
+        <FormattedText value={poemData.content} style={{ ...theme.typography.poemBody, color: colors.textPrimary }} />
       </View>
 
-      <View style={styles.statsContainer}>
-        <Text style={[styles.reads, { color: colors.textSecondary }]}>
-          {poemData.like_count || 0} likes
-        </Text>
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleLike}
-            disabled={isLiking || isLiked}
-          >
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={24}
-              color="#e17055"
-            />
-            <Text style={[styles.actionText, { color: colors.textSecondary }]}>
-              {poemData.like_count || 0}
-            </Text>
-          </TouchableOpacity>
+      <View style={styles.metaRow}>
+        {poemData.form ? (
+          <Text style={[theme.typography.labelMono, { color: colors.accent }]}>{poemData.form.toUpperCase()}</Text>
+        ) : null}
+        {themeDisplay ? (
+          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{themeDisplay.toUpperCase()}</Text>
+        ) : null}
+        <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{wordCount} WORDS</Text>
+        {poemData.era ? (
+          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{poemData.era.toUpperCase()}</Text>
+        ) : null}
+      </View>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
-            <Ionicons name="bookmark-outline" size={24} color={colors.textSecondary} />
-            <Text style={[styles.actionText, { color: colors.textSecondary }]}>Save</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={24} color={colors.textSecondary} />
-            <Text style={[styles.actionText, { color: colors.textSecondary }]}>Share</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.actions, { borderTopColor: colors.borderMuted }]}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleLike} disabled={isLiking || isLiked}>
+          <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color={colors.likeHeart} />
+          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{poemData.like_count || 0}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+          <Ionicons name="bookmark-outline" size={22} color={colors.accent} />
+          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>SAVE</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+          <Ionicons name="share-social-outline" size={22} color={colors.textSecondary} />
+          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>SHARE</Text>
+        </TouchableOpacity>
       </View>
 
       <Modal visible={showPlaylistModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Add to playlist</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.bgElevated, borderColor: colors.borderMuted }]}>
+            <Text style={[theme.typography.headerTitle, { color: colors.textPrimary, textAlign: 'center' }]}>Add to playlist</Text>
             <FlatList
               data={playlists}
               keyExtractor={(item) => item.id}
               ListEmptyComponent={
-                <Text style={{ color: colors.textSecondary, textAlign: 'center', padding: 16 }}>
-                  No playlists yet. Create one from Profile → Playlists.
+                <Text style={[theme.typography.bodySm, { color: colors.textSecondary, textAlign: 'center', padding: 16 }]}>
+                  No playlists yet. Create one from Profile.
                 </Text>
               }
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[styles.playlistRow, { borderBottomColor: colors.border }]}
+                  style={[styles.playlistRow, { borderBottomColor: colors.borderMuted }]}
                   onPress={() => handleAddToPlaylist(item.id, item.title)}
                 >
-                  <Text style={{ color: colors.text, fontWeight: '600' }}>{item.title}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    {item.playlist_poems?.length || 0} poems
+                  <Text style={[theme.typography.bodyMd, { color: colors.textPrimary }]}>{item.title}</Text>
+                  <Text style={[theme.typography.labelMono, { color: colors.accent }]}>
+                    {item.playlist_poems?.length || 0} POEMS
                   </Text>
                 </TouchableOpacity>
               )}
             />
             <TouchableOpacity style={styles.modalClose} onPress={() => setShowPlaylistModal(false)}>
-              <Text style={{ color: colors.primary }}>Close</Text>
+              <Text style={[theme.typography.labelBold, { color: colors.brandSecondary }]}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -212,59 +214,47 @@ const PoemScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scroll: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backButton: {
-    marginTop: 50,
-    marginLeft: 20,
-    marginBottom: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-  },
-  poemContainer: {
-    borderRadius: 15,
-    padding: 25,
-    margin: 20,
-    marginBottom: 20,
-    elevation: 5,
-  },
-  themeTag: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 15 },
-  content: { fontSize: 18, lineHeight: 30, marginBottom: 20 },
-  author: { fontSize: 16, textAlign: 'right', fontWeight: '600' },
-  statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     marginBottom: 20,
+    minHeight: 44,
   },
-  reads: { fontSize: 14 },
-  actions: { flexDirection: 'row' },
-  actionButton: { flexDirection: 'row', alignItems: 'center', marginLeft: 20 },
-  actionText: { marginLeft: 5 },
+  well: {
+    marginTop: 20,
+    borderWidth: 1,
+    borderLeftWidth: 2,
+    borderRadius: 8,
+    padding: 18,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 16,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 8 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(4, 17, 12, 0.72)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderWidth: 1,
     padding: 20,
     maxHeight: '60%',
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'center' },
   playlistRow: { paddingVertical: 14, borderBottomWidth: 1 },
   modalClose: { padding: 16, alignItems: 'center' },
 });

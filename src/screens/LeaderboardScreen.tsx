@@ -19,6 +19,7 @@ import {
   LeaderboardPeriod,
 } from '../services/leaderboardService';
 import { openUserProfile } from '../navigation/navigationHelpers';
+import { palette } from '../theme/tokens/colors';
 
 const PERIODS: { key: LeaderboardPeriod; label: string }[] = [
   { key: 'weekly', label: 'Week' },
@@ -75,7 +76,7 @@ const LeaderboardScreen = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -108,7 +109,7 @@ const LeaderboardScreen = () => {
         style={[styles.friendsToggle, friendsOnly && styles.friendsActive]}
         onPress={() => setFriendsOnly(!friendsOnly)}
       >
-        <Ionicons name="people" size={16} color={friendsOnly ? 'white' : '#3498db'} />
+        <Ionicons name="people" size={16} color={friendsOnly ? 'white' : palette.emerald} />
         <Text style={[styles.friendsText, friendsOnly && styles.friendsTextActive]}>
           Friends only
         </Text>
@@ -151,16 +152,16 @@ const LeaderboardScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   myRank: {
-    backgroundColor: '#3498db',
+    backgroundColor: palette.emerald,
     padding: 20,
     alignItems: 'center',
   },
-  myRankLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
-  myRankValue: { color: 'white', fontSize: 36, fontWeight: '800' },
-  myRankXp: { color: 'white', fontSize: 14, marginTop: 4 },
+  myRankLabel: { color: palette.ink, fontSize: 13 },
+  myRankValue: { color: palette.ink, fontSize: 36, fontWeight: '800' },
+  myRankXp: { color: palette.ink, fontSize: 14, marginTop: 4 },
   filters: {
     flexDirection: 'row',
     padding: 12,
@@ -170,12 +171,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     alignItems: 'center',
   },
-  filterActive: { backgroundColor: '#0984e3' },
-  filterText: { color: '#636e72', fontWeight: '600' },
-  filterTextActive: { color: 'white' },
+  filterActive: { backgroundColor: palette.emerald },
+  filterText: { color: palette.ghost, fontWeight: '600' },
+  filterTextActive: { color: palette.ink },
   friendsToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -185,29 +186,29 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#3498db',
+    borderColor: palette.emerald,
     marginBottom: 8,
   },
-  friendsActive: { backgroundColor: '#3498db' },
-  friendsText: { color: '#3498db', fontWeight: '600' },
-  friendsTextActive: { color: 'white' },
+  friendsActive: { backgroundColor: palette.emerald },
+  friendsText: { color: palette.emerald, fontWeight: '600' },
+  friendsTextActive: { color: palette.ink },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     marginHorizontal: 12,
     marginBottom: 8,
     padding: 14,
     borderRadius: 12,
     elevation: 1,
   },
-  rowMe: { borderWidth: 2, borderColor: '#3498db' },
-  rank: { width: 40, fontWeight: '800', fontSize: 16, color: '#2c3e50' },
+  rowMe: { borderWidth: 2, borderColor: palette.emerald },
+  rank: { width: 40, fontWeight: '800', fontSize: 16, color: palette.parchment },
   info: { flex: 1 },
-  name: { fontWeight: '700', color: '#2c3e50' },
-  streak: { fontSize: 12, color: '#95a5a6', marginTop: 2 },
-  xp: { fontWeight: '700', color: '#0984e3' },
-  empty: { textAlign: 'center', color: '#95a5a6', marginTop: 40 },
+  name: { fontWeight: '700', color: palette.parchment },
+  streak: { fontSize: 12, color: palette.ghost, marginTop: 2 },
+  xp: { fontWeight: '700', color: palette.emerald },
+  empty: { textAlign: 'center', color: palette.ghost, marginTop: 40 },
 });
 
 export default LeaderboardScreen;

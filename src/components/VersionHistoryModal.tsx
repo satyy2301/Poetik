@@ -8,6 +8,7 @@ import {
   FlatList,
 } from 'react-native';
 import { DraftVersion } from '../services/draftService';
+import { palette } from '../theme/tokens/colors';
 
 type VersionHistoryModalProps = {
   visible: boolean;
@@ -69,37 +70,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 16,
     padding: 20,
     width: '90%',
     maxHeight: '75%',
   },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
-  subtitle: { color: '#7f8c8d', marginBottom: 16 },
-  empty: { textAlign: 'center', color: '#95a5a6', padding: 20 },
+  title: { fontSize: 20, fontWeight: 'bold', color: palette.parchment },
+  subtitle: { color: palette.glacial, marginBottom: 16 },
+  empty: { textAlign: 'center', color: palette.ghost, padding: 20 },
   versionCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
   },
   versionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  versionNum: { fontWeight: '800', color: '#3498db' },
-  versionDate: { fontSize: 12, color: '#95a5a6' },
-  versionTitle: { fontWeight: '600', color: '#2c3e50', marginBottom: 4 },
-  versionPreview: { color: '#7f8c8d', fontSize: 13, lineHeight: 20 },
+  versionNum: { fontWeight: '800', color: palette.emerald },
+  versionDate: { fontSize: 12, color: palette.ghost },
+  versionTitle: { fontWeight: '600', color: palette.parchment, marginBottom: 4 },
+  versionPreview: { color: palette.glacial, fontSize: 13, lineHeight: 20 },
   restoreBtn: {
     marginTop: 8,
     alignSelf: 'flex-start',
-    backgroundColor: '#3498db',
+    backgroundColor: palette.emerald,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  restoreText: { color: 'white', fontWeight: '600', fontSize: 13 },
+  restoreText: { color: palette.ink, fontWeight: '600', fontSize: 13 },
   closeBtn: { marginTop: 12, alignItems: 'center', padding: 10 },
-  closeText: { color: '#7f8c8d', fontWeight: '600' },
+  closeText: { color: palette.glacial, fontWeight: '600' },
 });
 
 export default VersionHistoryModal;

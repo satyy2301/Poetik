@@ -15,6 +15,7 @@ import {
 import PoemCard from '../components/PoemCard';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { incrementPoemLikes } from '../services/poemService';
+import { palette } from '../theme/tokens/colors';
 
 const PublicPlaylistScreen = ({ navigation }: any) => {
   const route = useRoute<any>();
@@ -77,7 +78,7 @@ const PublicPlaylistScreen = ({ navigation }: any) => {
         </View>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-            <Ionicons name="share-outline" size={18} color="white" />
+            <Ionicons name="share-outline" size={18} color={palette.parchment} />
             <Text style={styles.shareText}>Share</Text>
           </TouchableOpacity>
           {user && (
@@ -105,19 +106,19 @@ const PublicPlaylistScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { backgroundColor: 'white', padding: 20, borderBottomWidth: 1, borderBottomColor: '#ecf0f1' },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50' },
-  desc: { color: '#7f8c8d', marginTop: 6 },
+  header: { backgroundColor: palette.spruce, padding: 20, borderBottomWidth: 1, borderBottomColor: palette.border },
+  title: { fontSize: 24, fontWeight: 'bold', color: palette.parchment },
+  desc: { color: palette.glacial, marginTop: 6 },
   stats: { flexDirection: 'row', gap: 16, marginTop: 12 },
-  stat: { color: '#636e72', fontSize: 13 },
+  stat: { color: palette.ghost, fontSize: 13 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#3498db', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  shareText: { color: 'white', fontWeight: '600' },
-  followBtn: { backgroundColor: '#00b894', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  followingBtn: { backgroundColor: '#bdc3c7' },
-  followText: { color: 'white', fontWeight: '600' },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: palette.emerald, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  shareText: { color: palette.ink, fontWeight: '600' },
+  followBtn: { backgroundColor: palette.jade, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  followingBtn: { backgroundColor: palette.ghost },
+  followText: { color: palette.ink, fontWeight: '600' },
 });
 
 export default PublicPlaylistScreen;

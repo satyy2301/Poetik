@@ -1,4 +1,5 @@
 import { ViewStyle } from 'react-native';
+import { palette } from './colors';
 
 export const spacing = {
   xs: 4,
@@ -11,25 +12,25 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 6,
-  md: 10,
-  lg: 16,
+  sm: 4,
+  md: 8,
+  lg: 12,
   full: 9999,
 };
 
 export const shadows = {
   card: {
-    shadowColor: '#000',
+    shadowColor: palette.ink,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
     elevation: 3,
   } as ViewStyle,
   floating: {
-    shadowColor: '#000',
+    shadowColor: palette.emerald,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
     elevation: 8,
   } as ViewStyle,
 };

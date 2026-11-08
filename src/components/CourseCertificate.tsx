@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
 type CourseCertificateProps = {
   visible: boolean;
@@ -36,31 +37,31 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: '#fffdf8',
+    backgroundColor: palette.spruce,
     borderRadius: 16,
     padding: 24,
     width: '100%',
     borderWidth: 2,
-    borderColor: '#d4af37',
+    borderColor: palette.mint,
     alignItems: 'center',
   },
-  heading: { fontSize: 22, fontWeight: '700', color: '#2c3e50' },
-  subheading: { color: '#7f8c8d', marginTop: 4, marginBottom: 16 },
+  heading: { fontSize: 22, fontWeight: '700', color: palette.parchment },
+  subheading: { color: palette.glacial, marginTop: 4, marginBottom: 16 },
   course: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#0984e3',
+    color: palette.emerald,
     textAlign: 'center',
     marginBottom: 12,
   },
-  body: { textAlign: 'center', color: '#636e72', lineHeight: 22, marginBottom: 20 },
+  body: { textAlign: 'center', color: palette.ghost, lineHeight: 22, marginBottom: 20 },
   button: {
-    backgroundColor: '#0984e3',
+    backgroundColor: palette.emerald,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
   },
-  buttonText: { color: 'white', fontWeight: '700' },
+  buttonText: { color: palette.ink, fontWeight: '700' },
 });
 
 export default CourseCertificate;

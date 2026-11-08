@@ -22,7 +22,7 @@ import { Poem } from '../types/poem';
 import { Author } from '../types/author';
 import { openAuthorProfile, openPoemDetail, openUserProfile } from '../navigation/navigationHelpers';
 import { useAuth } from '../context/AuthContext';
-
+import FolioHeader from '../components/ui/FolioHeader';
 const RECENT_KEY = 'poetik_recent_searches';
 const TRENDING_TAGS = ['Sonnet', 'Haiku', 'Free Verse', 'Love', 'Nature', 'Gothic'];
 
@@ -160,7 +160,7 @@ const SearchScreen = () => {
       ]}
       onPress={onPress}
     >
-      <Text style={[theme.typography.bodySm, { color: selected ? '#FFFFFF' : colors.textSecondary, fontWeight: selected ? '600' : '400' }]}>
+      <Text style={[theme.typography.bodySm, { color: selected ? colors.onBrand : colors.textPrimary, fontWeight: selected ? '600' : '400' }]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -202,12 +202,15 @@ const SearchScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+        <FolioHeader kicker="SEARCH" title="Search" sentence="Find a poem, a poet, or a person." />
+      </View>
       <View style={[styles.searchContainer, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
         <View style={[styles.searchInputContainer, { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle }]}>
           <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
-            placeholder="Search poems, authors, or users..."
+            placeholder="Find a poem, a poet, or a person"
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -227,11 +230,14 @@ const SearchScreen = () => {
             key={filter}
             style={[
               styles.filterTab,
-              activeFilter === filter && { borderBottomColor: colors.brandPrimary },
+              {
+                backgroundColor: activeFilter === filter ? colors.brandPrimary : 'transparent',
+                borderColor: activeFilter === filter ? colors.brandPrimary : colors.borderSubtle,
+              },
             ]}
             onPress={() => setActiveFilter(filter)}
           >
-            <Text style={[theme.typography.labelBold, { color: activeFilter === filter ? colors.brandPrimary : colors.textSecondary, fontSize: 14 }]}>
+            <Text style={[theme.typography.bodySm, { color: activeFilter === filter ? colors.onBrand : colors.textPrimary }]}>
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </Text>
           </TouchableOpacity>
@@ -294,10 +300,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterTab: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   poemFiltersRow: {
     flexDirection: 'row',

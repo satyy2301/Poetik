@@ -6,6 +6,7 @@ import { useUser } from '../../context/UserContext';
 import AIFeedbackWidget from '../learning/AIFeedbackWidget';
 import { FEATURES } from '../../config/features';
 import ComingSoonBanner from '../../components/ComingSoonBanner';
+import { palette } from '../../theme/tokens/colors';
 
 const ChallengeSystem = ({ challenge, onComplete }: { challenge: any; onComplete: () => void }) => {
   const { user } = useUser();
@@ -102,58 +103,58 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   task: {
     fontSize: 18,
     marginBottom: 30,
-    color: '#34495e',
+    color: palette.onSurface,
     lineHeight: 26,
   },
   input: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
     textAlignVertical: 'top',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: palette.canvas,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
   submitButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: palette.emerald,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
   },
   submitButtonDisabled: {
-    backgroundColor: '#bdc3c7',
+    backgroundColor: palette.ghost,
     opacity: 0.8,
   },
   submitButtonText: {
-    color: 'white',
+    color: palette.ink,
     fontWeight: 'bold',
     fontSize: 16,
   },
   completeButton: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
   },
   completeButtonText: {
-    color: 'white',
+    color: palette.ink,
     fontWeight: 'bold',
     fontSize: 16,
   },

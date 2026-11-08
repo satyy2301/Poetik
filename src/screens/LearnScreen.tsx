@@ -19,6 +19,7 @@ import ActivityChart from '../components/analytics/ActivityChart';
 import CourseCertificate from '../components/CourseCertificate';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import Button from '../components/ui/Button';
+import FolioHeader from '../components/ui/FolioHeader';
 import { useUser } from '../context/UserContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -120,7 +121,12 @@ const LearnScreen = ({ navigation }: any) => {
         onClose={() => setShowCertificate(false)}
       />
 
-      <View style={[styles.gamifiedHeader, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
+      <View style={[styles.gamifiedHeader, { backgroundColor: colors.bgCanvas, borderBottomColor: colors.borderMuted }]}>
+        <FolioHeader
+          kicker="LEARN"
+          title="Learn"
+          sentence="Short lessons and today's challenge."
+        />
         <View style={styles.badgeRow}>
           <View style={[styles.badge, { backgroundColor: colors.cardHeaderTint }]}>
             <Text>🔥</Text>
@@ -138,13 +144,12 @@ const LearnScreen = ({ navigation }: any) => {
 
         <View style={styles.headerMain}>
           <View style={{ flex: 1 }}>
-            <Text style={[theme.typography.displaySm, { color: colors.textPrimary }]}>Poetry Academy</Text>
+            <Text style={[theme.typography.displaySm, { color: colors.textPrimary }]}>Your progress</Text>
             <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4 }]}>
-              Master the art of verse
+              Keep a streak and finish the lessons.
             </Text>
             <ProgressBar progress={levelProgress(xp)} color={colors.brandPrimary} />
           </View>
-          <Button title="AI Tutor" onPress={() => navigation.navigate('AITutor')} variant="secondary" size="compact" />
         </View>
       </View>
 
@@ -169,9 +174,9 @@ const LearnScreen = ({ navigation }: any) => {
         <ScreenContainer edges={[]} scrollable={false}>
           {activeTab === 'courses' && (
             <View>
-              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
-                Featured Courses
-              </Text>
+            <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 12, fontSize: 16 }]}>
+              Lessons
+            </Text>
               {lessons.map((lesson) => (
                 <LessonCard key={lesson.id} lesson={lesson} onPress={() => openLesson(lesson)} />
               ))}

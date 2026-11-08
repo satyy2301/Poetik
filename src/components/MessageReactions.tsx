@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
 const REACTIONS = ['❤️', '👍', '😂', '😮', '🎉'];
 
@@ -38,13 +39,13 @@ const styles = StyleSheet.create({
   container: { marginTop: 4 },
   chip: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f1f2f6',
+    backgroundColor: palette.malachite,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginBottom: 4,
   },
-  chipActive: { backgroundColor: '#dfe6e9', borderWidth: 1, borderColor: '#74b9ff' },
+  chipActive: { backgroundColor: palette.onSurfaceVariant, borderWidth: 1, borderColor: palette.mint },
   chipText: { fontSize: 12 },
   picker: { flexDirection: 'row', gap: 4, marginTop: 2 },
   emojiBtn: { padding: 4 },

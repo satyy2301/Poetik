@@ -12,12 +12,14 @@ import PoemCard from '../components/PoemCard';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
+import FolioHeader from '../components/ui/FolioHeader';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { fetchUserAchievements } from '../services/achievementService';
 import { UserAchievement } from '../types/achievement';
 import { openAuthorProfile, openPlaylistDetail, openPoemDetail } from '../navigation/navigationHelpers';
 import { hapticLight } from '../utils/haptics';
+import { palette } from '../theme/tokens/colors';
 
 const ProfileScreen = ({ route }: any) => {
   const { user: currentUser, logout } = useAuth();
@@ -67,7 +69,7 @@ const ProfileScreen = ({ route }: any) => {
 
     const { data: poems, error: poemsError } = await supabase
       .from('poems')
-      .select(`id, title, content, themes, form, like_count, created_at, author:author_id(id, name)`)
+      .select(`id, title, content, themes, form, like_count, created_at, author_id, author:author_id(id, name)`)
       .eq('author_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -126,7 +128,13 @@ const ProfileScreen = ({ route }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bgCanvas }]} showsVerticalScrollIndicator={false}>
       <ScreenContainer maxWidth={theme.layout.splitPaneMaxWidth} edges={[]} scrollable={false} contentStyle={styles.profileContent}>
-        <View style={styles.profileHeader}>
+        <View style={[styles.heroCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+          <FolioHeader
+            kicker="PROFILE"
+            title={isOwnProfile ? 'Your folio' : `@${handle}`}
+            sentence={isOwnProfile ? 'Your poems, saved verses, and playlists.' : 'Poems from this writer.'}
+          />
+          <View style={styles.profileHeader}>
           <View style={[styles.avatar, { backgroundColor: colors.brandPrimary }]}>
             <Text style={styles.avatarText}>{authorInitial}</Text>
           </View>
@@ -162,6 +170,7 @@ const ProfileScreen = ({ route }: any) => {
               <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>{stat.label}</Text>
             </TouchableOpacity>
           ))}
+        </View>
         </View>
 
         {isOwnProfile && achievements.length > 0 && (
@@ -210,6 +219,7 @@ const ProfileScreen = ({ route }: any) => {
               onPress={() => openPoemDetail(navigation, item)}
               onAuthorPress={() => openAuthorProfile(navigation, user.id)}
               onLike={() => handleLike(item.id)}
+              onRemove={(poemId) => setUserPoems((prev) => prev.filter((poem) => poem.id !== poemId))}
             />
           )) : (
             <EmptyState
@@ -248,6 +258,10 @@ const ProfileScreen = ({ route }: any) => {
               onPress={() => openPoemDetail(navigation, item)}
               onAuthorPress={() => openAuthorProfile(navigation, item.author)}
               onLike={() => handleLike(item.id)}
+              onRemove={(poemId) => setFavorites((prev) => ({
+                ...prev,
+                poems: prev.poems.filter((poem) => poem.id !== poemId),
+              }))}
             />
           )) : (
             <EmptyState icon="heart-outline" title="No favorites yet" description="Save poems you love to find them here." />
@@ -285,9 +299,10 @@ const ProfileScreen = ({ route }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   profileContent: { paddingBottom: 32 },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20, marginTop: 8 },
+  heroCard: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 16 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
   avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#FFFFFF', fontSize: 28, fontFamily: 'Inter-Bold' },
+  avatarText: { color: palette.ink, fontSize: 28, fontFamily: 'Inter-Bold' },
   headerInfo: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statsCard: {

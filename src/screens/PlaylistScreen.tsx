@@ -8,6 +8,7 @@ import { Share } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { openPlaylistDetail } from '../navigation/navigationHelpers';
+import { palette } from '../theme/tokens/colors';
 
 const PlaylistScreen = () => {
   const { user } = useAuth();
@@ -139,14 +140,14 @@ const PlaylistScreen = () => {
           </TouchableOpacity>
           {playlist.is_public && (
             <TouchableOpacity style={styles.actionButton} onPress={() => handleSharePlaylist(playlist)}>
-              <Ionicons name="share-outline" size={20} color="#2ecc71" />
+              <Ionicons name="share-outline" size={20} color={palette.emerald} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => handleDeletePlaylist(playlist.id, playlist.title)}
           >
-            <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+            <Ionicons name="trash-outline" size={20} color={palette.error} />
           </TouchableOpacity>
           <Pressable onPress={() => openPlaylistDetail(navigation, playlist)} hitSlop={8}>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
@@ -167,7 +168,7 @@ const PlaylistScreen = () => {
           style={[styles.createButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowCreateModal(true)}
         >
-          <Ionicons name="add" size={24} color="white" />
+          <Ionicons name="add" size={24} color={palette.parchment} />
         </TouchableOpacity>
       </View>
 
@@ -313,7 +314,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 25,
   },
-  emptyCreateButtonText: { color: 'white', fontWeight: '600', fontSize: 16 },
+  emptyCreateButtonText: { color: palette.ink, fontWeight: '600', fontSize: 16 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
   cancelButton: { flex: 1, padding: 12, borderRadius: 25, alignItems: 'center' },
   confirmButton: { flex: 1, padding: 12, borderRadius: 25, alignItems: 'center' },
   confirmButtonDisabled: { opacity: 0.6 },
-  confirmButtonText: { color: 'white', fontWeight: '600' },
+  confirmButtonText: { color: palette.ink, fontWeight: '600' },
 });
 
 export default PlaylistScreen;

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { addFavoritePoem } from '../features/favorites/favoritesService';
 import { detectSpam } from '../utils/spamDetection';
+import { palette } from '../theme/tokens/colors';
 
 const CommunityScreen = () => {
   const { user } = useAuth();
@@ -271,7 +272,7 @@ const CommunityScreen = () => {
               onPress={createPost}
               disabled={!newPostContent.trim()}
             >
-              <Ionicons name="send" size={18} color="white" />
+              <Ionicons name="send" size={18} color={palette.parchment} />
               <Text style={styles.postButtonText}>Post</Text>
             </TouchableOpacity>
           </View>
@@ -286,7 +287,7 @@ const CommunityScreen = () => {
             onRefresh={fetchData}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Ionicons name="chatbubbles-outline" size={48} color="#bdc3c7" />
+                <Ionicons name="chatbubbles-outline" size={48} color={palette.ghost} />
                 <Text style={styles.emptyText}>No posts yet</Text>
                 <Text style={styles.emptySubtext}>Be the first to share something!</Text>
               </View>
@@ -305,7 +306,7 @@ const CommunityScreen = () => {
           onRefresh={fetchData}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="library-outline" size={48} color="#bdc3c7" />
+              <Ionicons name="library-outline" size={48} color={palette.ghost} />
               <Text style={styles.emptyText}>No poems yet</Text>
               <Text style={styles.emptySubtext}>Start writing and sharing your poetry!</Text>
             </View>
@@ -319,12 +320,12 @@ const CommunityScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
   },
   header: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
   tabs: {
     flexDirection: 'row',
@@ -338,47 +339,48 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#3498db',
+    borderBottomColor: palette.emerald,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#7f8c8d',
+    color: palette.glacial,
   },
   activeTabText: {
-    color: '#3498db',
+    color: palette.emerald,
     fontWeight: '600',
   },
   postInputContainer: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
   postInput: {
     minHeight: 60,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 15,
     paddingHorizontal: 15,
     paddingVertical: 12,
     marginBottom: 10,
     fontSize: 16,
+    color: palette.parchment,
     textAlignVertical: 'top',
   },
   postButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    backgroundColor: '#3498db',
+    backgroundColor: palette.emerald,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
   },
   postButtonDisabled: {
-    backgroundColor: '#bdc3c7',
+    backgroundColor: palette.ghost,
   },
   postButtonText: {
-    color: 'white',
+    color: palette.ink,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -386,24 +388,24 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   postContainer: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     marginHorizontal: 15,
     marginVertical: 5,
     padding: 15,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: palette.canvas,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
   },
   sharedPoemContainer: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     marginHorizontal: 15,
     marginVertical: 5,
     padding: 15,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: palette.canvas,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -418,16 +420,16 @@ const styles = StyleSheet.create({
   posterName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3498db',
+    color: palette.emerald,
   },
   postDate: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: palette.glacial,
   },
   postContent: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   emptyContainer: {
     flex: 1,
@@ -438,12 +440,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#7f8c8d',
+    color: palette.glacial,
     marginTop: 15,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#bdc3c7',
+    color: palette.ghost,
     textAlign: 'center',
     marginTop: 5,
   },

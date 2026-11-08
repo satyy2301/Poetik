@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ComingSoonBanner from '../components/ComingSoonBanner';
+import { palette } from '../theme/tokens/colors';
 
 const AITutorScreen = () => {
   return (
@@ -18,18 +19,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     justifyContent: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 10,
-    color: '#2c3e50',
+    color: palette.parchment,
     textAlign: 'center',
   },
   desc: {
-    color: '#636e72',
+    color: palette.ghost,
     marginBottom: 24,
     textAlign: 'center',
     lineHeight: 22,

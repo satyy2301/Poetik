@@ -23,6 +23,7 @@ import {
 } from '../features/playlists/playlistService';
 import { incrementPoemLikes } from '../services/poemService';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
+import { palette } from '../theme/tokens/colors';
 
 const PlaylistDetailScreen = () => {
   const route = useRoute<any>();
@@ -149,7 +150,7 @@ const PlaylistDetailScreen = () => {
           </Text>
           <View style={styles.actions}>
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={openEdit}>
-              <Ionicons name="create-outline" size={18} color="white" />
+              <Ionicons name="create-outline" size={18} color={palette.parchment} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} onPress={handleTogglePublic}>
               <Ionicons
@@ -160,7 +161,7 @@ const PlaylistDetailScreen = () => {
             </TouchableOpacity>
             {playlist.is_public && (
               <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
-                <Ionicons name="share-outline" size={22} color="#2ecc71" />
+                <Ionicons name="share-outline" size={22} color={palette.emerald} />
               </TouchableOpacity>
             )}
           </View>
@@ -190,7 +191,7 @@ const PlaylistDetailScreen = () => {
               style={styles.removeBtn}
               onPress={() => handleRemove(item.id, item.title)}
             >
-              <Ionicons name="remove-circle-outline" size={18} color="#e74c3c" />
+              <Ionicons name="remove-circle-outline" size={18} color={palette.error} />
               <Text style={styles.removeText}>Remove from playlist</Text>
             </TouchableOpacity>
           </View>
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
   list: { padding: 12 },
   empty: { textAlign: 'center', marginTop: 40, paddingHorizontal: 24 },
   removeBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 12 },
-  removeText: { color: '#e74c3c', fontSize: 13 },
+  removeText: { color: palette.error, fontSize: 13 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   modalContent: { borderRadius: 16, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' },
@@ -255,7 +256,7 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   cancelBtn: { flex: 1, padding: 12, alignItems: 'center' },
   saveBtn: { flex: 1, padding: 12, borderRadius: 20, alignItems: 'center' },
-  saveBtnText: { color: 'white', fontWeight: '600' },
+  saveBtnText: { color: palette.ink, fontWeight: '600' },
 });
 
 export default PlaylistDetailScreen;

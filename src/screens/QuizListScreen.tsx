@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { fetchQuizzes } from '../services/quizService';
 import { Quiz } from '../types/lesson';
+import { palette } from '../theme/tokens/colors';
 
 const QuizListScreen = ({ navigation }: any) => {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -28,7 +29,7 @@ const QuizListScreen = ({ navigation }: any) => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -57,20 +58,20 @@ const QuizListScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, padding: 20, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: '#2c3e50' },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 12, color: palette.parchment },
   item: {
     padding: 14,
     borderRadius: 10,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
   },
-  itemTitle: { fontSize: 16, fontWeight: '600', color: '#2c3e50' },
-  itemMeta: { color: '#7f8c8d', marginTop: 4, fontSize: 13 },
-  empty: { color: '#95a5a6', textAlign: 'center', marginTop: 40 },
+  itemTitle: { fontSize: 16, fontWeight: '600', color: palette.parchment },
+  itemMeta: { color: palette.glacial, marginTop: 4, fontSize: 13 },
+  empty: { color: palette.ghost, textAlign: 'center', marginTop: 40 },
 });
 
 export default QuizListScreen;

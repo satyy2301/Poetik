@@ -14,11 +14,15 @@ import {
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { deletePoem } from '../services/poemService';
 import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
 import { hapticMedium } from '../utils/haptics';
 import ReportModal from './ReportModal';
+import FormattedText from './FormattedText';
+import { palette } from '../theme/tokens/colors';
 
 const formatTimestamp = (dateStr?: string) => {
   if (!dateStr) return '';
@@ -37,14 +41,17 @@ const PoemCard = ({
   onAuthorPress,
   onLike,
   onComment,
+  onRemove,
 }: {
   poem: any;
   onPress: () => void;
   onAuthorPress: () => void;
   onLike: () => void;
   onComment?: () => void;
+  onRemove?: (poemId: string) => void;
 }) => {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const { theme } = useTheme();
   const colors = theme.colors;
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -53,6 +60,10 @@ const PoemCard = ({
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const animateHeart = () => {
@@ -109,16 +120,43 @@ const PoemCard = ({
     }
   };
 
+  const ownerId = poem.author_id || poem.author?.id;
+  const isOwner = !!user && ownerId === user.id;
+
   const handleMoreOptions = (e?: any) => {
     e?.stopPropagation?.();
     if (!user) {
-      Alert.alert('Login Required', 'Please login to report content');
+      Alert.alert('Login Required', 'Please login to manage this poem');
       return;
     }
-    Alert.alert('Poem options', undefined, [
-      { text: 'Report', onPress: () => setShowReportModal(true) },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    setConfirmDelete(false);
+    setDeleteError('');
+    setShowOptions(true);
+  };
+
+  const handleEdit = () => {
+    setShowOptions(false);
+    const params = { editPoem: poem };
+    const routeNames: string[] = navigation.getState?.()?.routeNames || [];
+    if (routeNames.includes('Write')) {
+      navigation.navigate('Write', params);
+      return;
+    }
+    navigation.navigate('MainTabs', { screen: 'Write', params });
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+      await deletePoem(poem.id, user.id);
+      setShowOptions(false);
+      onRemove?.(poem.id);
+    } catch (error: any) {
+      setDeleteError(error.message || 'Could not delete this poem.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleShare = async (e?: any) => {
@@ -182,12 +220,11 @@ const PoemCard = ({
           </Text>
 
           <View style={styles.contentWrapper}>
-            <Text
-              style={[theme.typography.poemBody, { color: colors.textPrimary }]}
+            <FormattedText
+              value={poem.content || ''}
               numberOfLines={4}
-            >
-              {poem.content}
-            </Text>
+              style={{ ...theme.typography.poemBody, color: colors.textPrimary }}
+            />
             {Platform.OS === 'web' && (
               <LinearGradient
                 colors={[`${colors.bgSurface}00`, colors.bgSurface]}
@@ -204,7 +241,7 @@ const PoemCard = ({
                   key={index}
                   style={[styles.tag, { backgroundColor: colors.cardHeaderTint, borderColor: colors.borderSubtle }]}
                 >
-                  <Text style={[theme.typography.bodySm, { color: colors.brandPrimary }]}>{tag}</Text>
+                  <Text style={[theme.typography.labelMono, { color: colors.accent, textTransform: 'uppercase' }]}>{tag}</Text>
                 </View>
               ))}
             </View>
@@ -260,6 +297,67 @@ const PoemCard = ({
             <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
           </TouchableOpacity>
         </View>
+
+        <Modal visible={showOptions} transparent animationType="fade" onRequestClose={() => setShowOptions(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowOptions(false)} />
+            <View style={[styles.optionsSheet, { backgroundColor: colors.bgElevated, borderColor: colors.borderMuted }]}>
+              <Text style={[theme.typography.headerTitle, { color: colors.textPrimary, marginBottom: 12 }]}>
+                {poem.title || 'Untitled'}
+              </Text>
+              {confirmDelete ? (
+                <>
+                  <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginBottom: 16 }]}>
+                    Delete this poem from your folio? This cannot be undone.
+                  </Text>
+                  {!!deleteError && (
+                    <Text style={[theme.typography.bodySm, { color: colors.error, marginBottom: 12 }]}>
+                      {deleteError}
+                    </Text>
+                  )}
+                  <TouchableOpacity
+                    style={[styles.optionBtn, { backgroundColor: colors.errorContainer }]}
+                    onPress={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>
+                      {isDeleting ? 'Deleting...' : 'Delete poem'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.optionBtn} onPress={() => setConfirmDelete(false)}>
+                    <Text style={[theme.typography.labelBold, { color: colors.textSecondary }]}>Keep it</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  {isOwner ? (
+                    <>
+                      <TouchableOpacity style={[styles.optionBtn, { borderColor: colors.borderMuted, borderWidth: 1 }]} onPress={handleEdit}>
+                        <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Edit poem</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.optionBtn, { borderColor: colors.error, borderWidth: 1 }]} onPress={() => setConfirmDelete(true)}>
+                        <Text style={[theme.typography.labelBold, { color: colors.error }]}>Delete poem</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.optionBtn, { borderColor: colors.borderMuted, borderWidth: 1 }]}
+                      onPress={() => {
+                        setShowOptions(false);
+                        setShowReportModal(true);
+                      }}
+                    >
+                      <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Report</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.optionBtn} onPress={() => setShowOptions(false)}>
+                    <Text style={[theme.typography.labelBold, { color: colors.textSecondary }]}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
 
         <Modal
           visible={showPlaylistModal}
@@ -333,7 +431,7 @@ const PoemCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 8,
     marginBottom: 16,
     borderWidth: 1,
     overflow: 'hidden',
@@ -359,7 +457,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
+    color: palette.ink,
     fontSize: 14,
     fontFamily: 'Inter-Bold',
   },
@@ -430,7 +528,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 20,
     width: '90%',
     maxHeight: '70%',
@@ -451,6 +549,21 @@ const styles = StyleSheet.create({
   noPlaylistsContainer: {
     alignItems: 'center',
     paddingVertical: 40,
+  },
+  optionsSheet: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  optionBtn: {
+    minHeight: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingHorizontal: 12,
   },
   modalCloseButton: {
     padding: 12,

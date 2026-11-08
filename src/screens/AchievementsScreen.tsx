@@ -14,6 +14,7 @@ import {
   fetchUserAchievements,
 } from '../services/achievementService';
 import { Achievement, UserAchievement } from '../types/achievement';
+import { palette } from '../theme/tokens/colors';
 
 const iconMap: Record<string, keyof typeof Ionicons.glyphMap> = {
   book: 'book',
@@ -66,7 +67,7 @@ const AchievementsScreen = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -97,7 +98,7 @@ const AchievementsScreen = () => {
                 <Ionicons
                   name={iconName}
                   size={28}
-                  color={unlocked ? '#f39c12' : '#bdc3c7'}
+                  color={unlocked ? palette.mint : palette.ghost}
                 />
               </View>
               <Text style={[styles.name, !unlocked && styles.textLocked]} numberOfLines={1}>
@@ -114,21 +115,21 @@ const AchievementsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   summary: {
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
-  summaryTitle: { fontSize: 22, fontWeight: 'bold', color: '#2c3e50' },
-  summaryCount: { color: '#7f8c8d', marginTop: 4 },
+  summaryTitle: { fontSize: 22, fontWeight: 'bold', color: palette.parchment },
+  summaryCount: { color: palette.glacial, marginTop: 4 },
   list: { padding: 12 },
   row: { justifyContent: 'space-between', marginBottom: 12 },
   card: {
     width: '48%',
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 14,
     padding: 14,
     alignItems: 'center',
@@ -139,22 +140,22 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#fef5e7',
+    backgroundColor: palette.malachite,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
-  iconLocked: { backgroundColor: '#ecf0f1' },
-  name: { fontWeight: '700', color: '#2c3e50', textAlign: 'center' },
-  textLocked: { color: '#95a5a6' },
+  iconLocked: { backgroundColor: palette.border },
+  name: { fontWeight: '700', color: palette.parchment, textAlign: 'center' },
+  textLocked: { color: palette.ghost },
   desc: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: palette.glacial,
     textAlign: 'center',
     marginTop: 4,
     minHeight: 32,
   },
-  xp: { color: '#2ecc71', fontSize: 12, fontWeight: '700', marginTop: 6 },
+  xp: { color: palette.emerald, fontSize: 12, fontWeight: '700', marginTop: 6 },
 });
 
 export default AchievementsScreen;

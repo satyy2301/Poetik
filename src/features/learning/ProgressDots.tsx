@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
+import { palette } from '../../theme/tokens/colors';
 
 type ProgressDotsProps = {
   total?: number;
@@ -14,7 +15,7 @@ const ProgressDots = ({
   current,
   totalSteps,
   currentStep,
-  color = '#6366F1',
+  color = palette.emerald,
 }: ProgressDotsProps) => {
   const count = total ?? totalSteps ?? 0;
   const active = current ?? currentStep ?? 0;
@@ -25,7 +26,7 @@ const ProgressDots = ({
           key={index}
           style={[
             styles.dot,
-            { backgroundColor: index <= active ? color : '#E2E8F0' },
+            { backgroundColor: index <= active ? color : palette.border },
           ]}
         />
       ))}

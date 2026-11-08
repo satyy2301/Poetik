@@ -15,6 +15,7 @@ import {
   FriendProgress,
 } from '../services/socialLearningService';
 import StreakCounter from '../components/StreakCounter';
+import { palette } from '../theme/tokens/colors';
 
 const StudyTogetherScreen = () => {
   const { user } = useUser();
@@ -54,7 +55,7 @@ const StudyTogetherScreen = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3498db" />
+        <ActivityIndicator size="large" color={palette.emerald} />
       </View>
     );
   }
@@ -68,7 +69,7 @@ const StudyTogetherScreen = () => {
       ListHeaderComponent={
         <View>
           <View style={styles.hero}>
-            <Ionicons name="people" size={32} color="#3498db" />
+            <Ionicons name="people" size={32} color={palette.emerald} />
             <Text style={styles.heroTitle}>Study Together</Text>
             <Text style={styles.heroSub}>
               {onlineCount} friend{onlineCount !== 1 ? 's' : ''} active today
@@ -118,41 +119,41 @@ const StudyTogetherScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f7fa' },
+  container: { flex: 1, backgroundColor: palette.canvas },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   hero: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     padding: 24,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
-  heroTitle: { fontSize: 22, fontWeight: 'bold', marginTop: 8, color: '#2c3e50' },
-  heroSub: { color: '#7f8c8d', marginTop: 4 },
+  heroTitle: { fontSize: 22, fontWeight: 'bold', marginTop: 8, color: palette.parchment },
+  heroSub: { color: palette.glacial, marginTop: 4 },
   section: { padding: 16 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2c3e50',
+    color: palette.parchment,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
   },
   recCard: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 14,
     marginBottom: 8,
     elevation: 1,
   },
-  recTitle: { fontWeight: '700', color: '#2c3e50' },
-  recReason: { color: '#7f8c8d', fontSize: 13, marginTop: 4 },
-  recXp: { color: '#2ecc71', fontWeight: '600', marginTop: 6 },
+  recTitle: { fontWeight: '700', color: palette.parchment },
+  recReason: { color: palette.glacial, fontSize: 13, marginTop: 4 },
+  recXp: { color: palette.emerald, fontWeight: '600', marginTop: 6 },
   friendCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     marginHorizontal: 16,
     marginBottom: 8,
     padding: 14,
@@ -160,20 +161,20 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   friendInfo: { flex: 1 },
-  friendName: { fontWeight: '700', color: '#2c3e50', fontSize: 16 },
-  friendMeta: { color: '#7f8c8d', fontSize: 13, marginTop: 2 },
+  friendName: { fontWeight: '700', color: palette.parchment, fontSize: 16 },
+  friendMeta: { color: palette.glacial, fontSize: 13, marginTop: 2 },
   onlineBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2ecc71',
+    backgroundColor: palette.emerald,
     marginRight: 6,
   },
-  onlineText: { fontSize: 12, color: '#2ecc71', fontWeight: '600' },
+  onlineText: { fontSize: 12, color: palette.emerald, fontWeight: '600' },
   empty: {
     textAlign: 'center',
-    color: '#95a5a6',
+    color: palette.ghost,
     padding: 24,
   },
 });

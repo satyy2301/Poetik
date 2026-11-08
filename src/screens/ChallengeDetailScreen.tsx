@@ -12,6 +12,7 @@ import { useUser } from '../context/UserContext';
 import { useProgress } from '../context/ProgressContext';
 import { submitChallenge, DailyChallenge } from '../services/challengeService';
 import XPGainToast from '../components/XPGainToast';
+import { palette } from '../theme/tokens/colors';
 
 const ChallengeDetailScreen = ({ route, navigation }: any) => {
   const { challenge } = route.params as { challenge: DailyChallenge };
@@ -70,7 +71,7 @@ const ChallengeDetailScreen = ({ route, navigation }: any) => {
         disabled={submitting}
       >
         {submitting ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={palette.parchment} />
         ) : (
           <Text style={styles.submitText}>Submit Challenge</Text>
         )}
@@ -80,37 +81,37 @@ const ChallengeDetailScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, padding: 20, backgroundColor: palette.canvas },
   badge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#e3f2fd',
-    color: '#0984e3',
+    backgroundColor: palette.veil,
+    color: palette.emerald,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     fontWeight: '700',
     marginBottom: 10,
   },
-  title: { fontSize: 20, fontWeight: '700', color: '#2c3e50', marginBottom: 8 },
-  xp: { color: '#f39c12', fontWeight: '600', marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: '700', color: palette.parchment, marginBottom: 8 },
+  xp: { color: palette.mint, fontWeight: '600', marginBottom: 16 },
   input: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#ecf0f1',
+    borderColor: palette.border,
     marginBottom: 16,
   },
   submit: {
-    backgroundColor: '#0984e3',
+    backgroundColor: palette.emerald,
     padding: 14,
     borderRadius: 10,
     alignItems: 'center',
   },
   disabled: { opacity: 0.7 },
-  submitText: { color: 'white', fontWeight: '700', fontSize: 16 },
+  submitText: { color: palette.ink, fontWeight: '700', fontSize: 16 },
 });
 
 export default ChallengeDetailScreen;

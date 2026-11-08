@@ -45,6 +45,18 @@ const LessonsDetailScreen = ({ route, navigation }: any) => {
     (async () => {
       try {
         const data = await getLessonById(lessonId);
+        if (data && !data.steps?.some((step) => step.type === 'quiz' && step.options?.length)) {
+          data.steps = [
+            ...(data.steps || []),
+            {
+              type: 'quiz',
+              question: 'Which rhyme scheme is ABAB?',
+              content: 'Which rhyme scheme is ABAB?',
+              options: ['Alternate lines rhyme', 'Consecutive lines rhyme', 'All lines rhyme', 'No rhyme'],
+              answerIndex: 0,
+            },
+          ];
+        }
         setLesson(data);
       } finally {
         setLoading(false);

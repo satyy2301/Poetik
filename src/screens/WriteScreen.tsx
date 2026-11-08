@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useOpenAI } from '../context/OpenAIContext';
 import { FEATURES } from '../config/features';
@@ -25,9 +26,8 @@ import Button from '../components/ui/Button';
 import { useTheme } from '../context/ThemeContext';
 import TemplateSelector from '../components/TemplateSelector';
 import VersionHistoryModal from '../components/VersionHistoryModal';
-import { publishPoem as publishPoemToDb } from '../services/poemService';
+import { publishPoem as publishPoemToDb, updatePoem } from '../services/poemService';
 import { upsertUserAuthor } from '../services/authorService';
-import { submitPoemForReview } from '../services/moderationService';
 import {
   saveDraft,
   loadDraft,
@@ -44,6 +44,8 @@ import {
   AITemplate,
 } from '../services/aiWritingTools';
 import { logActivity } from '../services/activityService';
+import { palette } from '../theme/tokens/colors';
+import FolioHeader from '../components/ui/FolioHeader';
 
 type WriteScreenProps = { navigation: { navigate: (screen: string) => void } };
 
@@ -74,6 +76,8 @@ const POEM_CATEGORIES = [
 const AUTO_SAVE_MS = 30000;
 
 const WriteScreen = ({ navigation }: WriteScreenProps) => {
+  const route = useRoute<any>();
+  const editPoem = route.params?.editPoem;
   const { user } = useAuth();
   const { apiKey, setApiKey } = useOpenAI();
   const { theme } = useTheme();
@@ -91,6 +95,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
 
   const [isPublishing, setIsPublishing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showVersionModal, setShowVersionModal] = useState(false);
@@ -139,7 +144,17 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       return;
     }
     (async () => {
+      if (route.params?.editPoem) {
+        try {
+          const v = await fetchVersions(user.id);
+          setVersions(v);
+        } catch {
+          // table may not exist yet
+        }
+        return;
+      }
       const draft = await loadDraft(user.id);
+      if (route.params?.editPoem) return;
       if (draft) {
         setTitle(draft.title);
         setContent(draft.content);
@@ -161,6 +176,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   }, [user?.id]);
 
   const doAutoSave = useCallback(async () => {
+    if (editingId || route.params?.editPoem) return;
     if (!user?.id || (!title && !content)) {
       return;
     }
@@ -174,7 +190,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     setLastSaved(new Date());
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2000);
-  }, [user?.id, title, content, selectedForm, selectedThemes]);
+  }, [editingId, route.params?.editPoem, user?.id, title, content, selectedForm, selectedThemes]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -279,6 +295,16 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     });
   };
 
+  useEffect(() => {
+    if (!editPoem?.id) return;
+    setEditingId(editPoem.id);
+    setTitle(editPoem.title || '');
+    setContent(editPoem.content || '');
+    setSelectedThemes(editPoem.themes || []);
+    setSelectedForm(editPoem.form || '');
+    setActiveTemplate(getTemplateByForm(editPoem.form || ''));
+  }, [editPoem]);
+
   const handlePublishPress = () => {
     if (!user) {
       Alert.alert('Error', 'You must be logged in to publish.');
@@ -306,6 +332,27 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       const authorName = user.email?.split('@')[0] || 'Unknown User';
       await upsertUserAuthor(user.id, authorName);
 
+      if (editingId) {
+        await updatePoem(editingId, user.id, {
+          title: title.trim(),
+          content: content.trim(),
+          themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
+          form: selectedForm || 'Free Verse',
+        });
+        setEditingId(null);
+        setTitle('');
+        setContent('');
+        setSelectedThemes([]);
+        setSelectedForm('');
+        setActiveTemplate(undefined);
+        setWordCount(0);
+        setSyllableCount(0);
+        await clearDraft(user.id);
+        (navigation as { setParams?: (params: object) => void }).setParams?.({ editPoem: undefined });
+        Alert.alert('Saved', 'Your poem was updated.');
+        return;
+      }
+
       const published = await publishPoemToDb(
         {
           title: title.trim(),
@@ -313,17 +360,11 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
           author_id: user.id,
           themes: selectedThemes.length > 0 ? selectedThemes : ['Other'],
           form: selectedForm || 'Free Verse',
-          visibility: 'pending',
+          visibility: 'public',
         },
         user.id,
       );
 
-      await submitPoemForReview(
-        published.id,
-        published.title,
-        published.content,
-        user.id,
-      );
       await logActivity(user.id, 'published', 'poem', published.id, {
         title: published.title,
       });
@@ -346,8 +387,8 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
       setVersions(v);
 
       Alert.alert(
-        'Submitted for review',
-        'Your poem was saved and will appear after approval.',
+        'Your poem is live',
+        'It is on the public feed now.',
         [
           { text: 'Write Another', style: 'cancel' },
           { text: 'Go to Read', onPress: () => navigation.navigate('Read') },
@@ -378,16 +419,14 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
     >
       <ScreenContainer edges={[]} contentStyle={styles.editorSheet}>
         {!headerHidden && (
-          <View style={styles.header}>
-            <Text
-              style={[
-                theme.typography.displaySm,
-                { color: colors.textPrimary },
-              ]}
-            >
-              New Poem
-            </Text>
-            <View style={styles.headerActions}>
+          <View style={[styles.folioCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+            <View style={styles.header}>
+              <FolioHeader
+                kicker="WRITE"
+                title={editingId ? 'Edit poem' : 'New poem'}
+                sentence="Give it a title, then write the lines."
+              />
+              <View style={styles.headerActions}>
               {saveStatus === 'saved' && (
                 <Text
                   style={[theme.typography.bodySm, { color: colors.success }]}
@@ -460,6 +499,25 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
               </TouchableOpacity>
             </View>
           </View>
+          {!focusMode && (
+            <TextInput
+              style={[styles.titleInput, darkMode && styles.titleInputDark]}
+              placeholder="Give your poem a title..."
+              placeholderTextColor={palette.ghost}
+              value={title}
+              onChangeText={setTitle}
+            />
+          )}
+          <RichTextEditor
+            ref={editorRef}
+            value={content}
+            onChange={setContent}
+            onStatsChange={handleStatsChange}
+            darkMode={darkMode}
+            focusMode={focusMode}
+            showToolbar={!focusMode}
+          />
+          </View>
         )}
 
         {focusMode && (
@@ -467,29 +525,21 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
             style={styles.exitFocus}
             onPress={() => setFocusMode(false)}
           >
-            <Ionicons name="close" size={24} color="#7f8c8d" />
+            <Ionicons name="close" size={24} color={palette.glacial} />
           </TouchableOpacity>
         )}
 
-        {!focusMode && (
-          <TextInput
-            style={[styles.titleInput, darkMode && styles.titleInputDark]}
-            placeholder="Give your poem a title..."
-            placeholderTextColor="#95a5a6"
-            value={title}
-            onChangeText={setTitle}
+        {focusMode && (
+          <RichTextEditor
+            ref={editorRef}
+            value={content}
+            onChange={setContent}
+            onStatsChange={handleStatsChange}
+            darkMode={darkMode}
+            focusMode={focusMode}
+            showToolbar={!focusMode}
           />
         )}
-
-        <RichTextEditor
-          ref={editorRef}
-          value={content}
-          onChange={setContent}
-          onStatsChange={handleStatsChange}
-          darkMode={darkMode}
-          focusMode={focusMode}
-          showToolbar={!focusMode}
-        />
 
         {!focusMode && (
           <>
@@ -669,7 +719,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
             ]}
           >
             <Button
-              title={isPublishing ? 'Publishing...' : 'Publish Poem'}
+              title={isPublishing ? 'Saving...' : editingId ? 'Save changes' : 'Publish Poem'}
               onPress={handlePublishPress}
               variant="primary"
               loading={isPublishing}
@@ -747,7 +797,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                   disabled={isPublishing}
                 >
                   <Text style={styles.confirmText}>
-                    {isPublishing ? 'Publishing...' : 'Publish Poem'}
+                    {isPublishing ? 'Saving...' : editingId ? 'Save changes' : 'Publish Poem'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -835,41 +885,39 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   editorSheet: { flex: 1, paddingBottom: 0 },
+  folioCard: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 12 },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
   },
-  screenTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
-  textDark: { color: '#ecf0f1' },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: palette.parchment },
+  textDark: { color: palette.parchment },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: { padding: 4 },
-  savedText: { fontSize: 11, color: '#2ecc71', fontWeight: '600' },
+  savedText: { fontSize: 11, color: palette.emerald, fontWeight: '600' },
   publishButton: {
-    backgroundColor: '#00b894',
+    backgroundColor: palette.jade,
     paddingVertical: 6,
     paddingHorizontal: 14,
     borderRadius: 15,
   },
-  publishDisabled: { backgroundColor: '#bdc3c7' },
-  publishText: { color: 'white', fontWeight: '600' },
+  publishDisabled: { backgroundColor: palette.ghost },
+  publishText: { color: palette.ink, fontWeight: '600' },
   exitFocus: { position: 'absolute', top: 8, right: 8, zIndex: 10, padding: 8 },
   titleInput: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
-  titleInputDark: { color: '#ecf0f1' },
+  titleInputDark: { color: palette.parchment },
   hintBox: {
-    backgroundColor: '#ebf5fb',
+    backgroundColor: palette.veil,
     borderRadius: 8,
     padding: 10,
     marginBottom: 8,
   },
-  hintTitle: { fontWeight: '600', color: '#2980b9', marginBottom: 4 },
-  hintText: { fontSize: 12, color: '#3498db' },
+  hintTitle: { fontWeight: '600', color: palette.mint, marginBottom: 4 },
+  hintText: { fontSize: 12, color: palette.emerald },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -890,48 +938,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: palette.border,
     marginRight: 6,
   },
-  aiChipActive: { backgroundColor: '#3498db' },
-  aiChipText: { color: '#2c3e50', fontWeight: '600', fontSize: 13 },
-  aiChipTextActive: { color: 'white' },
+  aiChipActive: { backgroundColor: palette.emerald },
+  aiChipText: { color: palette.parchment, fontWeight: '600', fontSize: 13 },
+  aiChipTextActive: { color: palette.ink },
   styleInput: {
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: palette.border,
     borderRadius: 8,
     padding: 8,
     marginBottom: 8,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
   },
   aiParams: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   paramField: { flex: 1 },
-  paramLabel: { fontSize: 11, color: '#636e72', marginBottom: 2 },
+  paramLabel: { fontSize: 11, color: palette.ghost, marginBottom: 2 },
   paramInput: {
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: palette.border,
     borderRadius: 8,
     padding: 8,
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
   },
-  aiError: { color: '#e74c3c', marginBottom: 6 },
+  aiError: { color: palette.error, marginBottom: 6 },
   aiButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e3f2fd',
+    backgroundColor: palette.veil,
     padding: 12,
     borderRadius: 25,
     marginTop: 4,
   },
-  aiButtonText: { marginLeft: 8, color: '#3498db', fontWeight: '600' },
+  aiButtonText: { marginLeft: 8, color: palette.emerald, fontWeight: '600' },
   suggestionsBox: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 12,
     marginTop: 8,
   },
-  suggestionsTitle: { fontWeight: 'bold', marginBottom: 8, color: '#2c3e50' },
+  suggestionsTitle: { fontWeight: 'bold', marginBottom: 8, color: palette.parchment },
   suggestionRow: {
     flexDirection: 'row',
     marginBottom: 8,
@@ -941,17 +989,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
-  suggestionText: { color: '#34495e', lineHeight: 22 },
-  previewLink: { color: '#0984e3', fontWeight: '600', padding: 8 },
+  suggestionText: { color: palette.onSurface, lineHeight: 22 },
+  previewLink: { color: palette.emerald, fontWeight: '600', padding: 8 },
   suggestionFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
   },
-  footerBtn: { color: '#3498db', fontWeight: '600' },
-  footerDisabled: { color: '#bdc3c7' },
+  footerBtn: { color: palette.emerald, fontWeight: '600' },
+  footerDisabled: { color: palette.ghost },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -959,7 +1007,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 20,
     padding: 20,
     width: '90%',
@@ -970,13 +1018,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 16,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 10,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   chipGrid: {
     flexDirection: 'row',
@@ -985,41 +1033,41 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   chip: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: palette.border,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
-  chipSelected: { backgroundColor: '#3498db', borderColor: '#3498db' },
-  chipText: { color: '#495057' },
-  chipTextSelected: { color: 'white', fontWeight: '600' },
+  chipSelected: { backgroundColor: palette.emerald, borderColor: palette.emerald },
+  chipText: { color: palette.glacial },
+  chipTextSelected: { color: palette.ink, fontWeight: '600' },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#e9ecef',
+    backgroundColor: palette.border,
     padding: 12,
     borderRadius: 25,
     alignItems: 'center',
   },
-  cancelText: { color: '#6c757d', fontWeight: '600' },
+  cancelText: { color: palette.ghost, fontWeight: '600' },
   confirmBtn: {
     flex: 1,
-    backgroundColor: '#00b894',
+    backgroundColor: palette.jade,
     padding: 12,
     borderRadius: 25,
     alignItems: 'center',
   },
-  confirmText: { color: 'white', fontWeight: '600' },
+  confirmText: { color: palette.ink, fontWeight: '600' },
   apiKeyInput: {
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: palette.border,
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
   },
-  previewBody: { color: '#34495e', lineHeight: 24 },
+  previewBody: { color: palette.onSurface, lineHeight: 24 },
 });
 
 export default WriteScreen;

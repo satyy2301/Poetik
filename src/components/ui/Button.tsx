@@ -44,11 +44,11 @@ const Button = ({
   const variantStyles: Record<ButtonVariant, { container: ViewStyle; text: TextStyle }> = {
     primary: {
       container: { backgroundColor: colors.brandPrimary },
-      text: { color: '#FFFFFF' },
+      text: { color: colors.onBrand },
     },
     secondary: {
       container: {
-        backgroundColor: colors.bgElevated,
+        backgroundColor: colors.bgSurface,
         borderWidth: 1,
         borderColor: colors.borderSubtle,
       },
@@ -56,15 +56,15 @@ const Button = ({
     },
     ghost: {
       container: { backgroundColor: 'transparent' },
-      text: { color: colors.brandPrimary },
+      text: { color: colors.accent },
     },
     danger: {
       container: {
-        backgroundColor: 'rgba(244, 63, 94, 0.1)',
+        backgroundColor: colors.warningContainer,
         borderWidth: 1,
-        borderColor: colors.likeHeart,
+        borderColor: colors.error,
       },
-      text: { color: colors.likeHeart },
+      text: { color: colors.error },
     },
   };
 
@@ -74,7 +74,7 @@ const Button = ({
   };
 
   const current = variantStyles[variant];
-  const spinnerColor = variant === 'primary' ? '#FFFFFF' : colors.brandPrimary;
+  const spinnerColor = variant === 'primary' ? colors.onBrand : colors.brandPrimary;
 
   return (
     <TouchableOpacity
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderRadius: 8,
+    borderRadius: 4,
     minHeight: 44,
     minWidth: 44,
   },

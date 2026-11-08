@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { animateProgress } from '../utils/animations';
+import { palette } from '../theme/tokens/colors';
 
 type ProgressBarProps = {
   progress: number;
@@ -8,7 +9,7 @@ type ProgressBarProps = {
   showText?: boolean;
 };
 
-const ProgressBar = ({ progress, color = '#3498db', showText = true }: ProgressBarProps) => {
+const ProgressBar = ({ progress, color = palette.emerald, showText = true }: ProgressBarProps) => {
   const animatedWidth = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   bar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#ecf0f1',
+    backgroundColor: palette.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginRight: 10,
@@ -55,7 +56,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    color: '#7f8c8d',
+    color: palette.glacial,
     minWidth: 35,
   },
 });

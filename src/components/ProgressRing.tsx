@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { animateProgress } from '../utils/animations';
+import { palette } from '../theme/tokens/colors';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -16,7 +17,7 @@ const ProgressRing = ({
   progress,
   size = 48,
   strokeWidth = 4,
-  color = '#3498db',
+  color = palette.emerald,
 }: ProgressRingProps) => {
   const animatedProgress = useRef(new Animated.Value(0)).current;
   const radius = (size - strokeWidth) / 2;
@@ -39,7 +40,7 @@ const ProgressRing = ({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#ecf0f1"
+          stroke={palette.border}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 10,
     fontWeight: '700',
-    color: '#2c3e50',
+    color: palette.parchment,
   },
 });
 

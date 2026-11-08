@@ -1,6 +1,7 @@
 // src/components/LessonStep.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { palette } from '../theme/tokens/colors';
 
 type LessonStepProps = {
   step: {
@@ -44,29 +45,29 @@ const LessonStep = ({ step, stepNumber, totalSteps }: LessonStepProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: palette.spruce,
     borderRadius: 10,
     padding: 20,
     marginBottom: 20,
   },
   stepIndicator: {
-    color: '#7f8c8d',
+    color: palette.glacial,
     marginBottom: 10,
   },
   stepTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 15,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   stepContent: {
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 15,
-    color: '#34495e',
+    color: palette.onSurface,
   },
   examplesContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: palette.canvas,
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
@@ -74,30 +75,30 @@ const styles = StyleSheet.create({
   examplesTitle: {
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#2c3e50',
+    color: palette.parchment,
   },
   example: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    borderBottomColor: palette.border,
   },
   exampleText: {
     fontStyle: 'italic',
-    color: '#7f8c8d',
+    color: palette.glacial,
     lineHeight: 22,
   },
   instructionsContainer: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: palette.veil,
     borderRadius: 8,
     padding: 15,
   },
   instructionsTitle: {
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1976d2',
+    color: palette.mint,
   },
   instructionsText: {
-    color: '#1976d2',
+    color: palette.mint,
     lineHeight: 22,
   },
 });

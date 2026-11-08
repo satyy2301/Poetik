@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { palette } from '../theme/tokens/colors';
 
 export type FormatAction =
   | 'bold'
@@ -25,7 +26,7 @@ type EditorToolbarProps = {
 
 const EditorToolbar = ({ onAction, canUndo, canRedo, darkMode }: EditorToolbarProps) => {
   const btnStyle = darkMode ? styles.btnDark : styles.btn;
-  const iconColor = darkMode ? '#ecf0f1' : '#2c3e50';
+  const iconColor = palette.parchment;
 
   const renderBtn = (action: FormatAction, label: string, icon?: keyof typeof Ionicons.glyphMap) => (
     <TouchableOpacity
@@ -46,7 +47,13 @@ const EditorToolbar = ({ onAction, canUndo, canRedo, darkMode }: EditorToolbarPr
   );
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.row}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.row}
+      // Keep the editor selection when a format button is pressed.
+      {...({ onMouseDown: (event: { preventDefault?: () => void }) => event.preventDefault?.() } as object)}
+    >
       {renderBtn('bold', 'B')}
       {renderBtn('italic', 'I')}
       {renderBtn('underline', 'U')}
@@ -66,7 +73,7 @@ const EditorToolbar = ({ onAction, canUndo, canRedo, darkMode }: EditorToolbarPr
 const styles = StyleSheet.create({
   row: { flexGrow: 0, marginBottom: 8 },
   btn: {
-    backgroundColor: '#dfe6e9',
+    backgroundColor: palette.spruce,
     minWidth: 32,
     height: 32,
     borderRadius: 8,
@@ -76,7 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   btnDark: {
-    backgroundColor: '#34495e',
+    backgroundColor: palette.malachite,
     minWidth: 32,
     height: 32,
     borderRadius: 8,
@@ -86,8 +93,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   btnDisabled: { opacity: 0.4 },
-  btnText: { fontWeight: '700', color: '#2c3e50', fontSize: 13 },
-  btnTextDark: { color: '#ecf0f1' },
+  btnText: { fontWeight: '700', color: palette.parchment, fontSize: 13 },
+  btnTextDark: { color: palette.parchment },
 });
 
 export default React.memo(EditorToolbar);
