@@ -44,13 +44,14 @@ function normalizePoem(poem, authorName, sourceUrl) {
   };
 }
 
-async function fetchPoetryDB({ authorLimit = 50, poemsPerAuthor = 15 } = {}) {
+async function fetchPoetryDB({ authorLimit = null, poemsPerAuthor = null } = {}) {
   const authorsResponse = await fetchWithCache(
     'https://poetrydb.org/author',
     'poetrydb_authors',
   );
 
-  const authors = (authorsResponse?.authors || []).slice(0, authorLimit);
+  const allAuthors = authorsResponse?.authors || [];
+  const authors = authorLimit ? allAuthors.slice(0, authorLimit) : allAuthors;
   const poems = [];
 
   for (const author of authors) {
@@ -62,7 +63,8 @@ async function fetchPoetryDB({ authorLimit = 50, poemsPerAuthor = 15 } = {}) {
 
       if (!Array.isArray(authorPoems)) continue;
 
-      for (const poem of authorPoems.slice(0, poemsPerAuthor)) {
+      const limited = poemsPerAuthor ? authorPoems.slice(0, poemsPerAuthor) : authorPoems;
+      for (const poem of limited) {
         const normalized = normalizePoem(
           poem,
           author,

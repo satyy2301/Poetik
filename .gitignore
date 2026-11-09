@@ -74,6 +74,10 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
+# Ingestion caches (PoetryDB / Gutenberg text)
+scripts/cache/
+src/scripts/cache/
+
 # Environment variables
 .env
 .env.local

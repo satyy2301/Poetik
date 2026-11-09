@@ -1,48 +1,124 @@
 /**
- * Minimal Gutenberg poetry fetcher.
- * Uses PoetryDB as primary source; this module adds curated public-domain titles
- * when PoetryDB quota is not enough.
+ * Public-domain poetry from Project Gutenberg via the Gutendex catalog.
+ * Only books Gutendex marks copyright:false are downloaded.
  */
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const {
+  formatAuthor,
+  eraFromDeathYear,
+  splitGutenbergPoems,
+  shouldSkipBook,
+  plainTextUrl,
+} = require('./gutenbergSplit');
 
-const CURATED_TITLES = [
-  { title: 'The Raven', author: 'Edgar Allan Poe' },
-  { title: 'Ozymandias', author: 'Percy Bysshe Shelley' },
-  { title: 'Kubla Khan', author: 'Samuel Taylor Coleridge' },
-];
+const CACHE_DIR = path.join(__dirname, '../cache/gutenberg');
+const CATALOG_URL = 'https://gutendex.com/books/?topic=poetry&languages=en';
+const USER_AGENT = 'PoetikIngest/1.0 (public-domain poetry reader; contact local dev)';
 
-async function fetchGutenbergSupplement() {
-  const poems = [];
-
-  for (const entry of CURATED_TITLES) {
-    try {
-      const url = `https://poetrydb.org/author,title/${encodeURIComponent(entry.author)};${encodeURIComponent(entry.title)}`;
-      const response = await axios.get(url, { timeout: 15000 });
-      const rows = Array.isArray(response.data) ? response.data : [response.data];
-
-      for (const poem of rows) {
-        if (!poem?.lines) continue;
-        poems.push({
-          title: poem.title || entry.title,
-          author: poem.author || entry.author,
-          content: poem.lines.join('\n'),
-          language: 'en',
-          era: 'classical',
-          form: 'Free Verse',
-          source: 'gutenberg-curated',
-          source_url: `gutenberg:${entry.author}:${entry.title}`,
-          line_count: poem.linecount || poem.lines.length,
-          word_count: poem.lines.join(' ').split(/\s+/).length,
-          themes: ['literature'],
-          visibility: 'public',
-        });
-      }
-    } catch (error) {
-      console.warn(`Gutenberg supplement skip ${entry.title}:`, error.message);
-    }
-  }
-
-  return poems;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-module.exports = { fetchGutenbergSupplement };
+async function getText(url, { timeout = 45000 } = {}) {
+  let lastError;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      const response = await axios.get(url, {
+        timeout,
+        responseType: 'text',
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json, text/plain, */*' },
+        transformResponse: [(data) => data],
+      });
+      return response.data;
+    } catch (error) {
+      lastError = error;
+      const status = error.response?.status;
+      console.warn(`Request failed (${attempt}/4) ${url}: ${error.message}`);
+      if (status && status < 500 && status !== 429) throw error;
+      await sleep(1000 * attempt);
+    }
+  }
+  throw lastError;
+}
+
+function cachePath(bookId) {
+  return path.join(CACHE_DIR, `${bookId}.txt`);
+}
+
+async function readBookText(bookId, url) {
+  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+  const file = cachePath(bookId);
+  if (fs.existsSync(file)) return fs.readFileSync(file, 'utf8');
+
+  const text = await getText(url, { timeout: 60000 });
+  if (typeof text !== 'string' || text.includes('<!DOCTYPE') || text.includes('<html')) {
+    throw new Error(`Book ${bookId} did not return plain text`);
+  }
+  fs.writeFileSync(file, text);
+  return text;
+}
+
+function bookMeta(book) {
+  const author = book.authors?.[0];
+  const deathYear = author?.death_year || null;
+  return {
+    id: book.id,
+    title: book.title,
+    author: formatAuthor(author?.name),
+    birthYear: author?.birth_year || null,
+    deathYear,
+    era: eraFromDeathYear(deathYear),
+  };
+}
+
+/**
+ * Walk the English poetry catalog. Calls onBookPoems(poems, meta) per book
+ * that yields at least one poem. maxBooks limits downloaded texts (Infinity = all).
+ */
+async function fetchGutenbergPoems({ maxBooks = Infinity, onBookPoems } = {}) {
+  let url = CATALOG_URL;
+  let downloaded = 0;
+  let yielded = 0;
+  const all = [];
+
+  while (url && downloaded < maxBooks) {
+    let page;
+    try {
+      page = JSON.parse(await getText(url));
+    } catch (error) {
+      console.warn('Gutenberg catalog page failed:', error.message);
+      break;
+    }
+    const results = Array.isArray(page.results) ? page.results : [];
+
+    for (const book of results) {
+      if (downloaded >= maxBooks) break;
+      if (shouldSkipBook(book)) continue;
+      const textUrl = plainTextUrl(book.formats);
+      if (!textUrl) continue;
+
+      downloaded += 1;
+      const meta = bookMeta(book);
+      try {
+        const text = await readBookText(book.id, textUrl);
+        const poems = splitGutenbergPoems(text, meta);
+        yielded += poems.length;
+        console.log(`Gutenberg #${book.id} ${meta.title}: ${poems.length} poems`);
+        if (onBookPoems && poems.length > 0) await onBookPoems(poems, meta);
+        else all.push(...poems);
+      } catch (error) {
+        console.warn(`Gutenberg skip #${book.id} ${meta.title}:`, error.message);
+      }
+      await sleep(750);
+    }
+
+    url = downloaded >= maxBooks ? null : page.next || null;
+  }
+
+  console.log(`Gutenberg done. Books read: ${downloaded}. Poems parsed: ${yielded}.`);
+  return onBookPoems ? [] : all;
+}
+
+module.exports = { fetchGutenbergPoems };
