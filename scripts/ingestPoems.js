@@ -3,12 +3,17 @@
  * Usage: node scripts/ingestPoems.js
  * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env
  *
- * PoetryDB is ingested in full. Gutenberg walks every English poetry book
- * Gutendex marks as public domain. Set GUTENBERG_MAX_BOOKS=40 to cap a run.
+ * PoetryDB is ingested in full unless GUTENBERG_LANGS is set.
+ * Gutenberg walks public-domain poetry. The default language is English.
+ * GUTENBERG_LANGS=hi,ur ingests those catalogs, the local corpus, and Wikisource scans.
+ * INDIC_TARGET caps a Hindi scan (default 1100). Each poet book also has its own cap.
+ * Urdu scans individual public-domain ghazals, up to 8 per poet.
  */
 const { getSupabaseAdmin } = require('./supabaseAdmin');
 const { fetchPoetryDB } = require('./sources/poetrydb');
 const { fetchGutenbergPoems } = require('./sources/gutenberg');
+const { fetchScannedVerse } = require('./sources/wikisourceScan');
+const { localIndicPoems } = require('./sources/indicCorpus');
 
 const BATCH_SIZE = 100;
 
@@ -206,30 +211,73 @@ async function insertPoems(poems) {
   return { inserted, skipped };
 }
 
-async function main() {
-  console.log('Fetching poems from PoetryDB...');
-  const poetryDbPoems = dedupePoems(await fetchPoetryDB());
-  console.log(`PoetryDB: ${poetryDbPoems.length} poems`);
-  const poetryResult = await insertPoems(poetryDbPoems);
-  console.log(`PoetryDB inserted ${poetryResult.inserted}, skipped ${poetryResult.skipped}`);
+function gutenbergLanguages() {
+  const raw = process.env.GUTENBERG_LANGS;
+  if (raw == null || raw === '' || raw === 'all') return null;
+  return raw.split(',').map((part) => part.trim()).filter(Boolean);
+}
 
-  const bookLimit = maxGutenbergBooks();
+async function ingestGutenberg(language, bookLimit, totals) {
   console.log(
-    `Fetching Gutenberg public-domain poetry (${bookLimit === Infinity ? 'all books' : `${bookLimit} books`})...`,
+    `Fetching Gutenberg ${language} public-domain poetry (${bookLimit === Infinity ? 'all books' : `${bookLimit} books`})...`,
   );
-  let inserted = poetryResult.inserted;
-  let skipped = poetryResult.skipped;
   await fetchGutenbergPoems({
     maxBooks: bookLimit,
+    language,
     onBookPoems: async (poems) => {
       const result = await insertPoems(dedupePoems(poems));
-      inserted += result.inserted;
-      skipped += result.skipped;
+      totals.inserted += result.inserted;
+      totals.skipped += result.skipped;
     },
   });
 
-  if (skipped > 0) {
-    console.log(`Skipped ${skipped} duplicate poems (already ingested).`);
+  if (language !== 'hi' && language !== 'ur') return;
+
+  const local = dedupePoems(localIndicPoems(language));
+  if (local.length > 0) {
+    console.log(`Local ${language} public-domain verse: ${local.length} poems`);
+    const localResult = await insertPoems(local);
+    totals.inserted += localResult.inserted;
+    totals.skipped += localResult.skipped;
+  }
+
+  if (process.env.INDIC_SKIP_WIKISOURCE === '1') {
+    console.log(`Skipping Wikisource scan for ${language}.`);
+    return;
+  }
+
+  console.log(`Scanning Wikisource ${language} public-domain verse...`);
+  await fetchScannedVerse(language, {
+    onPoems: async (poems) => {
+      const result = await insertPoems(dedupePoems(poems));
+      totals.inserted += result.inserted;
+      totals.skipped += result.skipped;
+    },
+  });
+}
+
+async function main() {
+  const bookLimit = maxGutenbergBooks();
+  const onlyLangs = gutenbergLanguages();
+  const totals = { inserted: 0, skipped: 0 };
+
+  if (!onlyLangs) {
+    console.log('Fetching poems from PoetryDB...');
+    const poetryDbPoems = dedupePoems(await fetchPoetryDB());
+    console.log(`PoetryDB: ${poetryDbPoems.length} poems`);
+    const poetryResult = await insertPoems(poetryDbPoems);
+    console.log(`PoetryDB inserted ${poetryResult.inserted}, skipped ${poetryResult.skipped}`);
+    totals.inserted += poetryResult.inserted;
+    totals.skipped += poetryResult.skipped;
+    await ingestGutenberg('en', bookLimit, totals);
+  } else {
+    for (const language of onlyLangs) {
+      await ingestGutenberg(language, bookLimit, totals);
+    }
+  }
+
+  if (totals.skipped > 0) {
+    console.log(`Skipped ${totals.skipped} duplicate poems (already ingested).`);
   }
 
   const { count } = await supabase
@@ -237,7 +285,7 @@ async function main() {
     .select('*', { count: 'exact', head: true })
     .eq('visibility', 'public');
 
-  console.log(`Done. Inserted ${inserted}. Public poems in database: ${count ?? 'unknown'}`);
+  console.log(`Done. Inserted ${totals.inserted}. Public poems in database: ${count ?? 'unknown'}`);
 }
 
 main().catch((error) => {

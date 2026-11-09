@@ -10,13 +10,14 @@ import {
   Modal,
   FlatList,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { incrementPoemLikes } from '../services/poemService';
-import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
+import { getUserPlaylists, addPoemToPlaylist, createPlaylist } from '../features/playlists/playlistService';
 import { openAuthorProfile, resolvePoemForDetail } from '../navigation/navigationHelpers';
 import { Poem } from '../types/poem';
 import FormattedText from '../components/FormattedText';
@@ -34,6 +35,8 @@ const PoemScreen = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [playlists, setPlaylists] = useState<any[]>([]);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
 
   const loadPoem = useCallback(async () => {
     setLoading(true);
@@ -124,6 +127,35 @@ const PoemScreen = () => {
     Alert.alert('Saved', `Added to "${title}"`);
   };
 
+  const handleCreatePlaylist = async () => {
+    const title = newPlaylistTitle.trim();
+    if (!user || !poemData) return;
+    if (!title) {
+      Alert.alert('Name required', 'Give the new playlist a name.');
+      return;
+    }
+    setIsCreatingPlaylist(true);
+    try {
+      const { data, error } = await createPlaylist(user.id, title);
+      if (error || !data?.id) {
+        Alert.alert('Error', 'Could not create the playlist');
+        return;
+      }
+      const added = await addPoemToPlaylist(data.id, poemData.id);
+      if (added.error) {
+        Alert.alert('Error', 'The playlist was created, but the poem was not saved.');
+        return;
+      }
+      setNewPlaylistTitle('');
+      setShowPlaylistModal(false);
+      Alert.alert('Saved', `Added to "${title}"`);
+    } catch {
+      Alert.alert('Error', 'Could not create the playlist');
+    } finally {
+      setIsCreatingPlaylist(false);
+    }
+  };
+
   const handleAuthorPress = () => {
     const authorId = typeof author === 'object' ? author?.id : poemData.author_id;
     if (authorId || author) {
@@ -182,12 +214,27 @@ const PoemScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.bgElevated, borderColor: colors.borderMuted }]}>
             <Text style={[theme.typography.headerTitle, { color: colors.textPrimary, textAlign: 'center' }]}>Add to playlist</Text>
+            <View style={[styles.createRow, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}>
+              <TextInput
+                value={newPlaylistTitle}
+                onChangeText={setNewPlaylistTitle}
+                placeholder="New playlist name"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.createInput, { color: colors.textPrimary }]}
+                editable={!isCreatingPlaylist}
+              />
+              <TouchableOpacity onPress={handleCreatePlaylist} disabled={isCreatingPlaylist}>
+                <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
+                  {isCreatingPlaylist ? 'Saving...' : 'Create'}
+                </Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               data={playlists}
               keyExtractor={(item) => item.id}
               ListEmptyComponent={
                 <Text style={[theme.typography.bodySm, { color: colors.textSecondary, textAlign: 'center', padding: 16 }]}>
-                  No playlists yet. Create one from Profile.
+                  No playlists yet. Name one above to save this poem.
                 </Text>
               }
               renderItem={({ item }) => (
@@ -256,6 +303,18 @@ const styles = StyleSheet.create({
     maxHeight: '60%',
   },
   playlistRow: { paddingVertical: 14, borderBottomWidth: 1 },
+  createRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  createInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
   modalClose: { padding: 16, alignItems: 'center' },
 });
 

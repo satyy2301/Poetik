@@ -1,12 +1,12 @@
 // src/screens/ProfileScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Switch, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Switch, Modal, TextInput } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { toggleFollowAuthor, isFollowingAuthor } from '../features/follow/followService';
-import { resolveAuthorAccountId } from '../services/authorService';
-import { getUserFavorites, addFavoritePoem } from '../features/favorites/favoritesService';
+import { resolveAuthorAccountId, findAuthorForUser, upsertUserAuthor } from '../services/authorService';
+import { getUserFavorites, addFavoritePoem, isFavoritePoet, toggleFavoritePoet } from '../features/favorites/favoritesService';
 import { getUserPlaylists } from '../features/playlists/playlistService';
 import PoemCard from '../components/PoemCard';
 import ScreenContainer from '../components/layout/ScreenContainer';
@@ -37,6 +37,10 @@ const ProfileScreen = ({ route }: any) => {
   const [activeTab, setActiveTab] = useState('poems');
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [showOverflow, setShowOverflow] = useState(false);
+  const [poemQuery, setPoemQuery] = useState('');
+  const [favoriteAuthorId, setFavoriteAuthorId] = useState<string | null>(null);
+  const [isFavoriteAuthor, setIsFavoriteAuthor] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   const isOwnProfile = user?.id === currentUser?.id;
   const handle = user?.email?.split('@')[0] || 'user';
@@ -75,6 +79,23 @@ const ProfileScreen = ({ route }: any) => {
 
     if (!poemsError && poems) setUserPoems(poems);
 
+    if (currentUser?.id && user?.id && user.id !== currentUser.id) {
+      const author = await findAuthorForUser(user.id);
+      setFavoriteAuthorId(author?.id || null);
+      if (author) {
+        try {
+          setIsFavoriteAuthor(await isFavoritePoet(currentUser.id, author.id));
+        } catch {
+          setIsFavoriteAuthor(false);
+        }
+      } else {
+        setIsFavoriteAuthor(false);
+      }
+    } else {
+      setFavoriteAuthorId(null);
+      setIsFavoriteAuthor(false);
+    }
+
     try {
       const favs = await getUserFavorites(user.id);
       const plists = await getUserPlaylists(user.id);
@@ -111,12 +132,49 @@ const ProfileScreen = ({ route }: any) => {
     }
   };
 
+  const handleFavoriteAuthor = async () => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please login to save favourite authors');
+      return;
+    }
+    if (isOwnProfile) return;
+    if (!favoriteAuthorId) {
+      const name = user?.email?.split('@')[0] || 'Poet';
+      try {
+        await upsertUserAuthor(user.id, name);
+      } catch {
+        Alert.alert('Unavailable', 'This writer cannot be saved yet.');
+        setFavoriteLoading(false);
+        return;
+      }
+    }
+    const poetId = favoriteAuthorId || user.id;
+    setFavoriteLoading(true);
+    try {
+      const { error } = await toggleFavoritePoet(currentUser.id, poetId);
+      if (error) throw error;
+      setFavoriteAuthorId(poetId);
+      setIsFavoriteAuthor((prev) => !prev);
+    } catch {
+      Alert.alert('Error', 'Could not update favourite authors.');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: () => logout() },
     ]);
   };
+
+  const poemSearch = poemQuery.trim().toLowerCase();
+  const visiblePoems = poemSearch
+    ? userPoems.filter((poem) =>
+        `${poem.title || ''} ${poem.content || ''}`.toLowerCase().includes(poemSearch),
+      )
+    : userPoems;
 
   const stats = [
     { label: 'Followers', value: followersCount, onPress: () => navigation.navigate('Followers', { userId: user?.id }) },
@@ -153,12 +211,29 @@ const ProfileScreen = ({ route }: any) => {
                 </TouchableOpacity>
               </>
             ) : (
-              <Button
-                title={isFollowing ? 'Following' : 'Follow'}
-                onPress={handleFollowToggle}
-                variant={isFollowing ? 'secondary' : 'primary'}
-                size="compact"
-              />
+              <>
+                <Button
+                  title={isFollowing ? 'Following' : 'Follow'}
+                  onPress={handleFollowToggle}
+                  variant={isFollowing ? 'secondary' : 'primary'}
+                  size="compact"
+                />
+                <TouchableOpacity
+                  onPress={handleFavoriteAuthor}
+                  disabled={favoriteLoading}
+                  accessibilityLabel={isFavoriteAuthor ? 'Favourited' : 'Favourite'}
+                  style={[styles.favBtn, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}
+                >
+                  <Ionicons
+                    name={isFavoriteAuthor ? 'star' : 'star-outline'}
+                    size={16}
+                    color={colors.brandPrimary}
+                  />
+                  <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
+                    {isFavoriteAuthor ? 'Favourited' : 'Favourite'}
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -212,22 +287,41 @@ const ProfileScreen = ({ route }: any) => {
         )}
 
         {activeTab === 'poems' && (
-          userPoems.length > 0 ? userPoems.map((item) => (
-            <PoemCard
-              key={item.id}
-              poem={item}
-              onPress={() => openPoemDetail(navigation, item)}
-              onAuthorPress={() => openAuthorProfile(navigation, user.id)}
-              onLike={() => handleLike(item.id)}
-              onRemove={(poemId) => setUserPoems((prev) => prev.filter((poem) => poem.id !== poemId))}
-            />
-          )) : (
-            <EmptyState
-              icon="create-outline"
-              title="No poems yet"
-              description={isOwnProfile ? "You haven't published any poems yet." : "This poet hasn't published any verses yet."}
-            />
-          )
+          <>
+            <View style={[styles.searchWrap, { borderColor: colors.borderMuted, backgroundColor: colors.bgSurface }]}>
+              <Ionicons name="search" size={16} color={colors.textSecondary} />
+              <TextInput
+                value={poemQuery}
+                onChangeText={setPoemQuery}
+                placeholder="Search their poems"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.searchInput, { color: colors.textPrimary }]}
+                autoCorrect={false}
+              />
+            </View>
+            {visiblePoems.length > 0 ? visiblePoems.map((item) => (
+              <PoemCard
+                key={item.id}
+                poem={item}
+                onPress={() => openPoemDetail(navigation, item)}
+                onAuthorPress={() => openAuthorProfile(navigation, user.id)}
+                onLike={() => handleLike(item.id)}
+                onRemove={(poemId) => setUserPoems((prev) => prev.filter((poem) => poem.id !== poemId))}
+              />
+            )) : (
+              <EmptyState
+                icon="create-outline"
+                title={poemQuery.trim() ? 'No poems match' : 'No poems yet'}
+                description={
+                  poemQuery.trim()
+                    ? 'Try a different word from the title or the poem.'
+                    : isOwnProfile
+                      ? "You haven't published any poems yet."
+                      : "This poet hasn't published any verses yet."
+                }
+              />
+            )}
+          </>
         )}
 
         {activeTab === 'playlists' && (
@@ -251,19 +345,52 @@ const ProfileScreen = ({ route }: any) => {
         )}
 
         {activeTab === 'favorites' && (
-          favorites.poems.length > 0 ? favorites.poems.map((item) => (
-            <PoemCard
-              key={item.id}
-              poem={item}
-              onPress={() => openPoemDetail(navigation, item)}
-              onAuthorPress={() => openAuthorProfile(navigation, item.author)}
-              onLike={() => handleLike(item.id)}
-              onRemove={(poemId) => setFavorites((prev) => ({
-                ...prev,
-                poems: prev.poems.filter((poem) => poem.id !== poemId),
-              }))}
-            />
-          )) : (
+          favorites.poems.length > 0 || (isOwnProfile && favorites.poets.length > 0) ? (
+            <>
+              {isOwnProfile && favorites.poets.length > 0 && (
+                <View style={styles.favAuthors}>
+                  <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 8 }]}>
+                    Favourite authors
+                  </Text>
+                  {favorites.poets.map((poet) => (
+                    <TouchableOpacity
+                      key={poet.id}
+                      style={[styles.playlistItem, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}
+                      onPress={() => openAuthorProfile(navigation, poet)}
+                    >
+                      <View style={[styles.poetAvatar, { backgroundColor: colors.brandPrimary }]}>
+                        <Text style={styles.poetAvatarText}>{poet.name?.[0]?.toUpperCase() || '?'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[theme.typography.bodyMd, { color: colors.textPrimary, fontFamily: 'Inter-Bold' }]}>
+                          {poet.name}
+                        </Text>
+                        {poet.bio ? (
+                          <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]} numberOfLines={1}>
+                            {poet.bio}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {favorites.poems.map((item) => (
+                <PoemCard
+                  key={item.id}
+                  poem={item}
+                  onPress={() => openPoemDetail(navigation, item)}
+                  onAuthorPress={() => openAuthorProfile(navigation, item.author)}
+                  onLike={() => handleLike(item.id)}
+                  onRemove={(poemId) => setFavorites((prev) => ({
+                    ...prev,
+                    poems: prev.poems.filter((poem) => poem.id !== poemId),
+                  }))}
+                />
+              ))}
+            </>
+          ) : (
             <EmptyState icon="heart-outline" title="No favorites yet" description="Save poems you love to find them here." />
           )
         )}
@@ -319,7 +446,30 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 12 },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  playlistItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 8, borderRadius: 12, borderWidth: 1 },
+  playlistItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 8, borderRadius: 12, borderWidth: 1, gap: 12 },
+  favAuthors: { marginBottom: 16 },
+  poetAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  poetAvatarText: { color: palette.ink, fontFamily: 'Inter-Bold' },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 42,
+    marginBottom: 12,
+  },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
+  favBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 16 },
   overflowMenu: { borderRadius: 12, borderWidth: 1, padding: 8, minWidth: 220 },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },

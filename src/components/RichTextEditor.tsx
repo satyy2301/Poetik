@@ -91,21 +91,27 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
       setCanRedo(false);
     }, []);
 
+    const capText = useCallback(
+      (text: string) => (text.length > maxLength ? text.slice(0, maxLength) : text),
+      [maxLength],
+    );
+
     const applyChange = useCallback(
       (newText: string) => {
-        if (newText !== lastValue.current) {
+        const capped = capText(newText);
+        if (capped !== lastValue.current) {
           pushUndo(lastValue.current);
-          lastValue.current = newText;
-          onChange(newText);
+          lastValue.current = capped;
+          onChange(capped);
         }
       },
-      [onChange, pushUndo],
+      [capText, onChange, pushUndo],
     );
 
     const syncFromSurface = () => {
       const surface = surfaceRef.current;
       if (!surface) return;
-      const markdown = htmlToMarkdown(surface.innerHTML);
+      const markdown = capText(htmlToMarkdown(surface.innerHTML));
       emittedRef.current = markdown;
       applyChange(markdown);
     };
@@ -218,6 +224,8 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
       if (lastLine === '## ') processed = text;
       if (lastLine === '- ') processed = text;
 
+      if (processed.length > maxLength) processed = processed.slice(0, maxLength);
+
       if (processed !== lastValue.current) {
         pushUndo(lastValue.current);
       }
@@ -230,7 +238,6 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
     };
 
     const misspellings = findMisspellings(value);
-    const charsLeft = maxLength - value.length;
 
     return (
       <View style={[styles.container, focusMode && styles.focusMode]}>
@@ -257,8 +264,15 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
               suppressContentEditableWarning: true,
               onInput: syncFromSurface,
               style: {
-                minHeight: focusMode ? 280 : 180,
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                overflowY: 'auto',
                 outline: 'none',
+                boxSizing: 'border-box',
+                padding: 12,
                 color: palette.parchment,
                 fontSize: focusMode ? 18 : 16,
                 lineHeight: focusMode ? '30px' : '26px',
@@ -279,7 +293,7 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
               try {
                 const payload = JSON.parse(event.nativeEvent.data);
                 if (payload.type !== 'html') return;
-                const markdown = htmlToMarkdown(payload.html || '');
+                const markdown = capText(htmlToMarkdown(payload.html || ''));
                 emittedRef.current = markdown;
                 applyChange(markdown);
               } catch {
@@ -292,9 +306,6 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
         <View style={styles.footer}>
           <Text style={[styles.meta, darkMode && styles.metaDark]}>
             {countWords(value)} words · {countSyllables(value)} syllables
-          </Text>
-          <Text style={[styles.meta, darkMode && styles.metaDark, charsLeft < 500 && styles.warn]}>
-            {charsLeft} chars left
           </Text>
         </View>
 
@@ -313,10 +324,11 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, minHeight: 0 },
   focusMode: { paddingTop: 4 },
   input: {
     flex: 1,
+    minHeight: 0,
     fontSize: 16,
     lineHeight: 26,
     color: palette.parchment,
@@ -326,22 +338,25 @@ const styles = StyleSheet.create({
     color: palette.parchment,
     backgroundColor: palette.canvas,
     borderRadius: 8,
-    padding: 12,
   },
   inputFocus: {
     fontSize: 18,
     lineHeight: 30,
   },
   webFrame: {
-    minHeight: 180,
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
     position: 'relative',
   },
   nativeEditor: {
-    minHeight: 220,
+    flex: 1,
+    minHeight: 0,
     backgroundColor: 'transparent',
   },
   nativeEditorFocus: {
-    minHeight: 320,
+    flex: 1,
+    minHeight: 0,
   },
   placeholder: {
     position: 'absolute',
@@ -357,7 +372,6 @@ const styles = StyleSheet.create({
   },
   meta: { fontSize: 12, color: palette.glacial },
   metaDark: { color: palette.ghost },
-  warn: { color: palette.mint },
   spellHints: {
     backgroundColor: palette.malachite,
     borderRadius: 8,

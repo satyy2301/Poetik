@@ -10,11 +10,16 @@ type PoemFilterProps = {
   onSortChange: (sort: PoemSort) => void;
 };
 
-type FilterKey = 'era' | 'theme' | 'form';
+type FilterKey = 'era' | 'theme' | 'form' | 'language';
 
 const ERAS = ['Romantic', 'Victorian', 'Modern', 'Contemporary', 'Classical'];
 const THEMES = ['Love', 'Nature', 'Dreams', 'Spiritual', 'Hope', 'Melancholy', 'Loss', 'War', 'Peace'];
-const FORMS = ['Free Verse', 'Sonnet', 'Haiku', 'Limerick', 'Ballad', 'Ode', 'Lyric'];
+const FORMS = ['Free Verse', 'Sonnet', 'Haiku', 'Limerick', 'Ballad', 'Ode', 'Lyric', 'Shayari'];
+const LANGUAGES = [
+  { label: 'English', value: 'en' },
+  { label: 'Hindi', value: 'hi' },
+  { label: 'Urdu', value: 'ur' },
+];
 const SORTS: { label: string; value: PoemSort }[] = [
   { label: 'Newest', value: 'newest' },
   { label: 'Popular', value: 'popular' },
@@ -24,9 +29,10 @@ const GROUPS: { key: FilterKey; label: string }[] = [
   { key: 'era', label: 'Era' },
   { key: 'theme', label: 'Theme' },
   { key: 'form', label: 'Form' },
+  { key: 'language', label: 'Language' },
 ];
 
-const OPTIONS: Record<FilterKey, string[]> = {
+const OPTIONS: Record<Exclude<FilterKey, 'language'>, string[]> = {
   era: ERAS,
   theme: THEMES,
   form: FORMS,
@@ -42,7 +48,8 @@ const PoemFilter = ({
   const colors = theme.colors;
   const [group, setGroup] = useState<FilterKey>('era');
   const activeValue = currentFilters[group] || null;
-  const hasFilters = !!(currentFilters.era || currentFilters.theme || currentFilters.form);
+  const hasFilters = !!(currentFilters.era || currentFilters.theme || currentFilters.form || currentFilters.language);
+  const languageName = LANGUAGES.find((item) => item.value === currentFilters.language)?.label;
 
   const selectOption = (value: string) => {
     onFilterChange({
@@ -52,7 +59,13 @@ const PoemFilter = ({
   };
 
   const clearFilters = () => {
-    onFilterChange({ era: null, theme: null, form: null, authorId: currentFilters.authorId ?? null });
+    onFilterChange({
+      era: null,
+      theme: null,
+      form: null,
+      language: null,
+      authorId: currentFilters.authorId ?? null,
+    });
     onSortChange('newest');
   };
 
@@ -91,7 +104,7 @@ const PoemFilter = ({
       <View style={styles.groupRow}>
         {GROUPS.map((item) => {
           const selected = group === item.key;
-          const chosen = currentFilters[item.key];
+          const chosen = item.key === 'language' ? languageName : currentFilters[item.key];
           return (
             <TouchableOpacity
               key={item.key}
@@ -110,26 +123,47 @@ const PoemFilter = ({
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
-        {OPTIONS[group].map((option) => {
-          const selected = activeValue === option;
-          return (
-            <TouchableOpacity
-              key={option}
-              onPress={() => selectOption(option)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: selected ? colors.brandPrimary : 'transparent',
-                  borderColor: selected ? colors.brandPrimary : colors.borderSubtle,
-                },
-              ]}
-            >
-              <Text style={[theme.typography.bodySm, { color: selected ? colors.onBrand : colors.textPrimary }]}>
-                {option}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {group === 'language'
+          ? LANGUAGES.map((option) => {
+              const selected = activeValue === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => selectOption(option.value)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                      borderColor: selected ? colors.brandPrimary : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Text style={[theme.typography.bodySm, { color: selected ? colors.onBrand : colors.textPrimary }]}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
+          : OPTIONS[group].map((option) => {
+              const selected = activeValue === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  onPress={() => selectOption(option)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: selected ? colors.brandPrimary : 'transparent',
+                      borderColor: selected ? colors.brandPrimary : colors.borderSubtle,
+                    },
+                  ]}
+                >
+                  <Text style={[theme.typography.bodySm, { color: selected ? colors.onBrand : colors.textPrimary }]}>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
       </ScrollView>
     </View>
   );
@@ -149,6 +183,7 @@ const styles = StyleSheet.create({
   },
   groupRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: 12,
     gap: 16,
   },

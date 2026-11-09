@@ -26,6 +26,7 @@ export type PoemFilters = {
   era?: string | null;
   theme?: string | null;
   form?: string | null;
+  language?: string | null;
   authorId?: string | null;
   followingOnly?: boolean;
   followingIds?: string[];

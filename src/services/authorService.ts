@@ -63,22 +63,47 @@ export const getAuthorById = async (authorId: string): Promise<Author | null> =>
   return data as Author;
 };
 
+/** Find the authors row for an auth user, whether the ids match or user_id is set. */
+export const findAuthorForUser = async (userId: string): Promise<Author | null> => {
+  const byId = await getAuthorById(userId);
+  if (byId) return byId;
+  const { data } = await supabase
+    .from('authors')
+    .select(AUTHOR_SELECT)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return (data as Author) || null;
+};
+
+const poemSearchOr = (query: string) => {
+  const safe = query.trim().replace(/[%_,()*]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!safe) return null;
+  return `title.ilike.%${safe}%,content.ilike.%${safe}%`;
+};
+
 export const getAuthorPoems = async (
   authorId: string,
   page = 0,
   pageSize = 20,
+  query?: string,
 ): Promise<{ poems: Poem[]; hasMore: boolean }> => {
-  const from = page * pageSize;
-  const to = from + pageSize;
-
-  const { data, error } = await supabase
+  const filter = query ? poemSearchOr(query) : null;
+  const request = supabase
     .from('poems')
     .select(POEM_SELECT)
     .eq('author_id', authorId)
     .in('visibility', ['public', 'pending'])
-    .order('created_at', { ascending: false })
-    .range(from, to);
+    .order('created_at', { ascending: false });
 
+  if (filter) {
+    const { data, error } = await request.or(filter).limit(100);
+    if (error) throw error;
+    return { poems: (data || []) as unknown as Poem[], hasMore: false };
+  }
+
+  const from = page * pageSize;
+  const to = from + pageSize;
+  const { data, error } = await request.range(from, to);
   if (error) throw error;
 
   const rows = (data || []) as unknown as Poem[];

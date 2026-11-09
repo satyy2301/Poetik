@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   Share,
+  TextInput,
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { deletePoem } from '../services/poemService';
-import { getUserPlaylists, addPoemToPlaylist } from '../features/playlists/playlistService';
+import { getUserPlaylists, addPoemToPlaylist, createPlaylist } from '../features/playlists/playlistService';
 import { hapticMedium } from '../utils/haptics';
 import ReportModal from './ReportModal';
 import FormattedText from './FormattedText';
@@ -40,14 +41,12 @@ const PoemCard = ({
   onPress,
   onAuthorPress,
   onLike,
-  onComment,
   onRemove,
 }: {
   poem: any;
   onPress: () => void;
   onAuthorPress: () => void;
   onLike: () => void;
-  onComment?: () => void;
   onRemove?: (poemId: string) => void;
 }) => {
   const { user } = useAuth();
@@ -56,6 +55,8 @@ const PoemCard = ({
   const colors = theme.colors;
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [playlists, setPlaylists] = useState<any[]>([]);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -117,6 +118,40 @@ const PoemCard = ({
     } catch (error) {
       console.error('Error adding to playlist:', error);
       Alert.alert('Error', 'Failed to add poem to playlist');
+    }
+  };
+
+  const handleCreatePlaylist = async () => {
+    const title = newPlaylistTitle.trim();
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to save poems to playlists');
+      return;
+    }
+    if (!title) {
+      Alert.alert('Name required', 'Give the new playlist a name.');
+      return;
+    }
+    setIsCreatingPlaylist(true);
+    try {
+      const { data, error } = await createPlaylist(user.id, title);
+      if (error || !data?.id) {
+        Alert.alert('Error', 'Could not create the playlist');
+        return;
+      }
+      const added = await addPoemToPlaylist(data.id, poem.id);
+      if (added.error) {
+        Alert.alert('Error', 'The playlist was created, but the poem was not saved.');
+        return;
+      }
+      setIsSaved(true);
+      setNewPlaylistTitle('');
+      setShowPlaylistModal(false);
+      Alert.alert('Saved', `Added to "${title}"`);
+    } catch (error) {
+      console.error('Error creating playlist:', error);
+      Alert.alert('Error', 'Could not create the playlist');
+    } finally {
+      setIsCreatingPlaylist(false);
     }
   };
 
@@ -188,14 +223,13 @@ const PoemCard = ({
           theme.shadows.card,
         ]}
       >
-        {/* Author header row */}
-        <View style={[styles.authorRow, { backgroundColor: colors.cardHeaderTint }]}>
+        <View style={styles.authorRow}>
           <TouchableOpacity onPress={onAuthorPress} style={styles.authorInfo}>
             <View style={[styles.avatar, { backgroundColor: colors.brandPrimary }]}>
               <Text style={styles.avatarText}>{authorInitial}</Text>
             </View>
-            <View>
-              <Text style={[styles.handle, theme.typography.labelBold, { color: colors.textPrimary }]}>
+            <View style={styles.authorMeta}>
+              <Text style={[styles.handle, theme.typography.labelBold, { color: colors.textPrimary }]} numberOfLines={1}>
                 @{poem.author?.name || 'Unknown'}
               </Text>
               <Text style={[styles.timestamp, theme.typography.bodySm, { color: colors.textSecondary }]}>
@@ -207,23 +241,36 @@ const PoemCard = ({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onPress={handleMoreOptions}
           >
-            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+            <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.body}>
           <Text
-            style={[theme.typography.poemTitle, { color: colors.textPrimary }]}
+            style={[theme.typography.poemTitle, styles.title, { color: colors.textPrimary }]}
             numberOfLines={2}
           >
             {poem.title || 'Untitled'}
           </Text>
 
+          {tags.length > 0 && (
+            <View style={styles.tagsRow}>
+              {tags.map((tag: string, index: number) => (
+                <View
+                  key={index}
+                  style={[styles.tag, { backgroundColor: colors.cardHeaderTint }]}
+                >
+                  <Text style={[styles.tagText, { color: colors.brandSecondary }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View style={styles.contentWrapper}>
             <FormattedText
               value={poem.content || ''}
               numberOfLines={4}
-              style={{ ...theme.typography.poemBody, color: colors.textPrimary }}
+              style={{ ...theme.typography.poemBody, color: colors.textSecondary }}
             />
             {Platform.OS === 'web' && (
               <LinearGradient
@@ -233,22 +280,9 @@ const PoemCard = ({
               />
             )}
           </View>
-
-          {tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {tags.map((tag: string, index: number) => (
-                <View
-                  key={index}
-                  style={[styles.tag, { backgroundColor: colors.cardHeaderTint, borderColor: colors.borderSubtle }]}
-                >
-                  <Text style={[theme.typography.labelMono, { color: colors.accent, textTransform: 'uppercase' }]}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
         </View>
 
-        <View style={[styles.actionsRow, { borderTopColor: colors.borderMuted }]}>
+        <View style={[styles.actionsRow, { borderTopColor: colors.borderSubtle }]}>
           <TouchableOpacity
             style={styles.actionItem}
             onPress={handleLike}
@@ -257,7 +291,7 @@ const PoemCard = ({
             <Animated.View style={{ transform: [{ scale: heartScale }] }}>
               <Ionicons
                 name={isLiked ? 'heart' : 'heart-outline'}
-                size={22}
+                size={18}
                 color={colors.likeHeart}
               />
             </Animated.View>
@@ -268,32 +302,19 @@ const PoemCard = ({
 
           <TouchableOpacity
             style={styles.actionItem}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              onComment?.() ?? onPress();
-            }}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color={colors.textSecondary} />
-            <Text style={[styles.actionCount, { color: colors.textSecondary }]}>
-              {poem.comment_count || 0}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
             onPress={handleAddToPlaylist}
             disabled={isLoadingPlaylists}
           >
             <Ionicons
               name={isSaved ? 'bookmark' : 'bookmark-outline'}
-              size={20}
+              size={18}
               color={isSaved ? colors.bookmarkGold : colors.textSecondary}
             />
             <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Save</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionItem} onPress={handleShare}>
-            <Ionicons name="share-social-outline" size={20} color={colors.textSecondary} />
+            <Ionicons name="share-social-outline" size={18} color={colors.textSecondary} />
             <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
           </TouchableOpacity>
         </View>
@@ -371,14 +392,34 @@ const PoemCard = ({
                 Add to Playlist
               </Text>
 
+              <View style={[styles.createRow, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}>
+                <TextInput
+                  value={newPlaylistTitle}
+                  onChangeText={setNewPlaylistTitle}
+                  placeholder="New playlist name"
+                  placeholderTextColor={colors.textMuted}
+                  style={[styles.createInput, { color: colors.textPrimary }]}
+                  editable={!isCreatingPlaylist}
+                />
+                <TouchableOpacity
+                  onPress={handleCreatePlaylist}
+                  disabled={isCreatingPlaylist}
+                  accessibilityLabel="Create playlist and save poem"
+                >
+                  <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
+                    {isCreatingPlaylist ? 'Saving...' : 'Create'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               {playlists.length === 0 ? (
                 <View style={styles.noPlaylistsContainer}>
                   <MaterialIcons name="playlist-add" size={48} color={colors.textSecondary} />
                   <Text style={[theme.typography.emptyTitle, { color: colors.textPrimary, marginTop: 15 }]}>
-                    No playlists found
+                    No playlists yet
                   </Text>
-                  <Text style={[theme.typography.emptyDescription, { color: colors.textSecondary, marginTop: 5 }]}>
-                    Create a playlist first to organize your poems
+                  <Text style={[theme.typography.emptyDescription, { color: colors.textSecondary, marginTop: 5, textAlign: 'center' }]}>
+                    Name one above and this poem is saved into it.
                   </Text>
                 </View>
               ) : (
@@ -431,8 +472,8 @@ const PoemCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 18,
+    marginBottom: 14,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -441,7 +482,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 14,
+    paddingBottom: 2,
   },
   authorInfo: {
     flexDirection: 'row',
@@ -449,10 +491,13 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
   },
+  authorMeta: {
+    flex: 1,
+  },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -469,10 +514,14 @@ const styles = StyleSheet.create({
   },
   body: {
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  title: {
+    marginBottom: 8,
   },
   contentWrapper: {
-    marginTop: 8,
+    marginTop: 2,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -481,27 +530,32 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 24,
+    height: 28,
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 12,
+    gap: 6,
+    marginBottom: 10,
   },
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
+    borderRadius: 999,
+  },
+  tagText: {
+    fontSize: 11,
+    fontFamily: 'Inter-Bold',
+    letterSpacing: 0.2,
   },
   actionsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    borderTopWidth: 1,
+    marginTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionItem: {
     flexDirection: 'row',
@@ -545,6 +599,21 @@ const styles = StyleSheet.create({
   },
   playlistInfo: {
     flex: 1,
+  },
+  createRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    marginBottom: 12,
+  },
+  createInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 8,
   },
   noPlaylistsContainer: {
     alignItems: 'center',

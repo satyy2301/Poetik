@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +31,7 @@ import {
 } from '../services/followService';
 import ReportModal from '../components/ReportModal';
 import { palette } from '../theme/tokens/colors';
+import { isFavoritePoet, toggleFavoritePoet } from '../features/favorites/favoritesService';
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +63,11 @@ const AuthorProfileScreen = () => {
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [followLoading, setFollowLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [poemQuery, setPoemQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const searchGen = useRef(0);
 
   const isOwnProfile = currentUser?.id === accountUserId;
   const canInteract = !!accountUserId && !isOwnProfile;
@@ -99,8 +106,13 @@ const AuthorProfileScreen = () => {
       setFollowCounts(counts);
       setPage(0);
 
-      if (currentUser && resolvedAccountId && currentUser.id !== resolvedAccountId) {
-        setFollowing(await isFollowing(currentUser.id, resolvedAccountId));
+      if (currentUser && currentUser.id !== resolvedAccountId) {
+        if (resolvedAccountId) {
+          setFollowing(await isFollowing(currentUser.id, resolvedAccountId));
+        }
+        setIsFavorite(await isFavoritePoet(currentUser.id, authorData.id));
+      } else {
+        setIsFavorite(false);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load author');
@@ -114,7 +126,7 @@ const AuthorProfileScreen = () => {
   }, [loadAuthor]);
 
   const loadMorePoems = async () => {
-    if (!hasMore || isLoadingMore || !authorId) return;
+    if (poemQuery.trim() || !hasMore || isLoadingMore || !authorId) return;
 
     setIsLoadingMore(true);
     try {
@@ -148,6 +160,69 @@ const AuthorProfileScreen = () => {
       Alert.alert('Error', 'Could not update follow status. Please try again.');
     } finally {
       setFollowLoading(false);
+    }
+  };
+
+  const handlePoemQuery = (text: string) => {
+    setPoemQuery(text);
+    if (!text.trim()) {
+      clearPoemQuery();
+    }
+  };
+
+  useEffect(() => {
+    const q = poemQuery.trim();
+    if (!authorId || !q) return;
+    const gen = ++searchGen.current;
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const result = await getAuthorPoems(authorId, 0, PAGE_SIZE, q);
+        if (gen !== searchGen.current) return;
+        setAuthorPoems(result.poems);
+        setHasMore(false);
+      } catch (err) {
+        console.error('Poem search failed:', err);
+      } finally {
+        if (gen === searchGen.current) setIsSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [poemQuery, authorId]);
+
+  const clearPoemQuery = async () => {
+    const gen = ++searchGen.current;
+    setPoemQuery('');
+    if (!authorId) return;
+    setIsSearching(true);
+    try {
+      const result = await getAuthorPoems(authorId, 0, PAGE_SIZE);
+      if (gen !== searchGen.current) return;
+      setAuthorPoems(result.poems);
+      setHasMore(result.hasMore);
+      setPage(0);
+    } catch (err) {
+      console.error('Reload poems failed:', err);
+    } finally {
+      if (gen === searchGen.current) setIsSearching(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please login to save favourite authors');
+      return;
+    }
+    if (!author || isOwnProfile) return;
+    setFavoriteLoading(true);
+    try {
+      const { error } = await toggleFavoritePoet(currentUser.id, author.id);
+      if (error) throw error;
+      setIsFavorite((prev) => !prev);
+    } catch {
+      Alert.alert('Error', 'Could not update favourite authors.');
+    } finally {
+      setFavoriteLoading(false);
     }
   };
 
@@ -237,6 +312,22 @@ const AuthorProfileScreen = () => {
       <Text style={[styles.sectionTitle, styles.poemsHeading, { color: colors.text }]}>
         Poems by {author?.name}
       </Text>
+      <View style={styles.searchWrap}>
+        <Ionicons name="search" size={16} color={colors.textSecondary} />
+        <TextInput
+          value={poemQuery}
+          onChangeText={handlePoemQuery}
+          placeholder="Search their poems"
+          placeholderTextColor={colors.textSecondary}
+          style={[styles.searchInput, { color: colors.text }]}
+          autoCorrect={false}
+        />
+        {poemQuery.length > 0 && (
+          <TouchableOpacity onPress={clearPoemQuery} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
     </>
   );
 
@@ -275,6 +366,23 @@ const AuthorProfileScreen = () => {
             {years ? ` · ${years}` : ''}
           </Text>
         </View>
+        {!isOwnProfile && (
+          <TouchableOpacity
+            style={[styles.messageButton, { backgroundColor: colors.background, borderColor: colors.border }]}
+            onPress={handleFavoriteToggle}
+            disabled={favoriteLoading}
+            accessibilityLabel={isFavorite ? 'Favourited' : 'Favourite'}
+          >
+            <Ionicons
+              name={isFavorite ? 'star' : 'star-outline'}
+              size={16}
+              color={colors.primary}
+            />
+            <Text style={[styles.messageButtonText, { color: colors.primary }]}>
+              {isFavorite ? 'Favourited' : 'Favourite'}
+            </Text>
+          </TouchableOpacity>
+        )}
         {canInteract && (
           <View style={styles.actionRow}>
             <TouchableOpacity
@@ -336,12 +444,16 @@ const AuthorProfileScreen = () => {
         onEndReached={loadMorePoems}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
-          isLoadingMore ? <ActivityIndicator style={styles.footerLoader} color={colors.primary} /> : null
+          isSearching || isLoadingMore ? (
+            <ActivityIndicator style={styles.footerLoader} color={colors.primary} />
+          ) : null
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="library-outline" size={64} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No poems found</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              {poemQuery.trim() ? 'No poems match' : 'No poems found'}
+            </Text>
           </View>
         }
       />
@@ -372,8 +484,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     padding: 16,
     borderBottomWidth: 1,
+    gap: 8,
   },
   backButton: { padding: 8, marginRight: 8 },
   authorInfo: { flex: 1 },
@@ -416,6 +530,19 @@ const styles = StyleSheet.create({
   themesSection: { padding: 20, marginBottom: 8 },
   sectionTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 12 },
   poemsHeading: { paddingHorizontal: 15, paddingTop: 8 },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 15,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 42,
+  },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
   themesContainer: { flexDirection: 'row', flexWrap: 'wrap' },
   themePill: {
     borderRadius: 20,

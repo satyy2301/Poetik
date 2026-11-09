@@ -135,29 +135,35 @@ function plainTextUrl(formats) {
 }
 
 function slugTitle(title) {
-  return String(title || '')
+  const latin = String(title || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 80);
+  if (latin) return latin;
+  let hash = 0;
+  const value = String(title || '');
+  for (let i = 0; i < value.length; i += 1) hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  return `poem-${hash.toString(36)}`;
 }
 
-function poemRecord({ title, content, author, book, era }) {
+function poemRecord({ title, content, author, book, era, form, minLines = 3 }) {
   const trimmedTitle = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 500);
   const body = content.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
   const contentLines = nonEmptyLines(body.split('\n'));
-  if (!trimmedTitle || contentLines.length < 3 || contentLines.length > 250) return null;
+  if (!trimmedTitle || contentLines.length < minLines || contentLines.length > 250) return null;
   if (looksLikeProse(body.split('\n')) || looksLikeContents(body.split('\n'))) return null;
 
   const authorName = formatAuthor(author);
   const lineCount = contentLines.length;
+  const shayari = isShayariBook(book);
   return {
     title: trimmedTitle,
     author: authorName,
     content: body,
-    language: 'en',
+    language: book.language || 'en',
     era: era || 'classical',
-    form: inferForm(lineCount),
+    form: form || (shayari ? 'Shayari' : inferForm(lineCount)),
     source: 'gutenberg',
     source_url: `https://www.gutenberg.org/ebooks/${book.id}#${slugTitle(trimmedTitle)}`,
     line_count: lineCount,
@@ -169,7 +175,72 @@ function poemRecord({ title, content, author, book, era }) {
   };
 }
 
+function isShayariBook(book) {
+  const blob = `${book?.title || ''} ${(book?.subjects || []).join(' ')}`;
+  return /shayari|ghazal|\bsher\b|nazm|शायरी|ग़ज़ल|गजल|नज़्म|غزل|نظم/i.test(blob);
+}
+
+function isMostlyNonLatin(text) {
+  const sample = String(text || '').slice(0, 8000);
+  const letters = sample.match(/[A-Za-z\u0900-\u097F\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/g) || [];
+  if (letters.length < 40) return false;
+  const latin = letters.filter((ch) => /[A-Za-z]/.test(ch)).length;
+  return latin / letters.length < 0.45;
+}
+
+function uniquePoemUrls(poems) {
+  const seen = new Map();
+  return poems.map((poem) => {
+    const count = seen.get(poem.source_url) || 0;
+    seen.set(poem.source_url, count + 1);
+    if (count === 0) return poem;
+    return { ...poem, source_url: `${poem.source_url}-${count + 1}` };
+  });
+}
+
+function splitNonLatinPoems(text, book) {
+  const lines = stripGutenbergBoilerplate(text);
+  const blocks = [];
+  let current = [];
+  const push = () => {
+    if (current.some((line) => line.trim())) blocks.push(current);
+    current = [];
+  };
+  for (const line of lines) {
+    if (!line.trim()) push();
+    else current.push(line);
+  }
+  push();
+
+  const poems = [];
+  let untitled = 0;
+  for (let i = 0; i < blocks.length; i += 1) {
+    const blockLines = nonEmptyLines(blocks[i]);
+    if (blockLines.length === 0) continue;
+    const nextLines = blocks[i + 1] ? nonEmptyLines(blocks[i + 1]) : [];
+    const titled = blockLines.length === 1
+      && blockLines[0].length <= 48
+      && nextLines.length >= 2
+      && !SKIP_HEADING.test(blockLines[0]);
+    const title = titled ? blockLines[0] : `${book.title} ${untitled + 1}`;
+    const contentLines = titled ? blocks[i + 1] : blocks[i];
+    if (titled) i += 1;
+    else untitled += 1;
+    const record = poemRecord({
+      title,
+      content: contentLines.join('\n'),
+      author: book.author,
+      book,
+      era: book.era,
+      minLines: 2,
+    });
+    if (record) poems.push(record);
+  }
+  return uniquePoemUrls(poems);
+}
+
 function splitGutenbergPoems(text, book) {
+  if (isMostlyNonLatin(text)) return splitNonLatinPoems(text, book);
   const lines = stripGutenbergBoilerplate(text);
   if (lines.length === 0) return [];
 
@@ -257,13 +328,7 @@ function splitGutenbergPoems(text, book) {
     if (fallback) poems.push(fallback);
   }
 
-  const seen = new Map();
-  return poems.map((poem) => {
-    const count = seen.get(poem.source_url) || 0;
-    seen.set(poem.source_url, count + 1);
-    if (count === 0) return poem;
-    return { ...poem, source_url: `${poem.source_url}-${count + 1}` };
-  });
+  return uniquePoemUrls(poems);
 }
 
 module.exports = {

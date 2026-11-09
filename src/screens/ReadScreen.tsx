@@ -30,6 +30,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
     era: null,
     theme: null,
     form: null,
+    language: null,
     authorId: null,
   });
   const [sort, setSort] = useState<PoemSort>('newest');
@@ -113,7 +114,6 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
         onPress={() => handleViewPoem(item)}
         onAuthorPress={() => handleViewAuthor(item.author as { id: string; name?: string })}
         onLike={() => handleLike(item.id)}
-        onComment={() => handleViewPoem(item)}
         onRemove={(poemId) => setPoems((prev) => prev.filter((poem) => poem.id !== poemId))}
       />
     ),
@@ -143,6 +143,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
           onRefresh={handleRefresh}
           refreshing={refreshing}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list}
           ListEmptyComponent={
             !loading ? (
               <EmptyState
@@ -168,7 +169,8 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  feedContent: { paddingHorizontal: 0, flex: 1 },
+  feedContent: { flex: 1 },
+  list: { paddingTop: 12, paddingBottom: 28 },
 });
 
 export default ReadScreen;

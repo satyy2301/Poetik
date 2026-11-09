@@ -436,74 +436,90 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
               )}
               <TouchableOpacity
                 onPress={() => setShowTemplateModal(true)}
-                style={styles.iconBtn}
+                style={styles.toolBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Form"
               >
                 <Ionicons
                   name="document-text-outline"
-                  size={22}
+                  size={20}
                   color={colors.brandPrimary}
                 />
+                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Form</Text>
               </TouchableOpacity>
               {versions.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setShowVersionModal(true)}
-                  style={styles.iconBtn}
+                  style={styles.toolBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="History"
                 >
                   <Ionicons
                     name="time-outline"
-                    size={22}
+                    size={20}
                     color={colors.brandPrimary}
                   />
+                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>History</Text>
                 </TouchableOpacity>
               )}
               {FEATURES.AI_ENABLED ? (
                 <TouchableOpacity
                   onPress={requestAISuggestions}
-                  style={styles.iconBtn}
+                  style={styles.toolBtn}
                   disabled={isAiLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Suggest"
                 >
                   <MaterialIcons
                     name="auto-awesome"
-                    size={22}
+                    size={20}
                     color={colors.brandPrimary}
                   />
+                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Suggest</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity style={styles.iconBtn} disabled>
+                <TouchableOpacity style={styles.toolBtn} disabled accessibilityLabel="Suggest">
                   <Ionicons
                     name="sparkles-outline"
-                    size={22}
+                    size={20}
                     color={colors.textSecondary}
                   />
+                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Suggest</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 onPress={() => setFocusMode(!focusMode)}
-                style={styles.iconBtn}
+                style={styles.toolBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Focus"
               >
                 <Ionicons
                   name={focusMode ? 'expand' : 'contract'}
-                  size={22}
+                  size={20}
                   color={colors.brandPrimary}
                 />
+                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Focus</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setDarkMode(!darkMode)}
-                style={styles.iconBtn}
+                style={styles.toolBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Night"
               >
                 <Ionicons
                   name={darkMode ? 'sunny' : 'moon'}
-                  size={22}
+                  size={20}
                   color={colors.brandPrimary}
                 />
+                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Night</Text>
               </TouchableOpacity>
             </View>
           </View>
           {!focusMode && (
             <TextInput
-              style={[styles.titleInput, darkMode && styles.titleInputDark]}
+              style={[styles.titleInput, { color: colors.textPrimary }]}
               placeholder="Give your poem a title..."
-              placeholderTextColor={palette.ghost}
+              placeholderTextColor={colors.textMuted}
               value={title}
               onChangeText={setTitle}
             />
@@ -544,10 +560,10 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
         {!focusMode && (
           <>
             {activeTemplate && validation.hints.length > 0 && (
-              <View style={styles.hintBox}>
-                <Text style={styles.hintTitle}>{validation.message}</Text>
+              <View style={[styles.hintBox, { backgroundColor: colors.bgElevated }]}>
+                <Text style={[styles.hintTitle, { color: colors.brandSecondary }]}>{validation.message}</Text>
                 {validation.hints.map((h, i) => (
-                  <Text key={i} style={styles.hintText}>
+                  <Text key={i} style={[styles.hintText, { color: colors.brandPrimary }]}>
                     • {h}
                   </Text>
                 ))}
@@ -598,14 +614,22 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                         key={t.key}
                         style={[
                           styles.aiChip,
-                          aiTemplate === t.key && styles.aiChipActive,
+                          {
+                            backgroundColor: colors.bgElevated,
+                            borderColor: colors.borderSubtle,
+                          },
+                          aiTemplate === t.key && {
+                            backgroundColor: colors.brandPrimary,
+                            borderColor: colors.brandPrimary,
+                          },
                         ]}
                         onPress={() => setAiTemplate(t.key)}
                       >
                         <Text
                           style={[
                             styles.aiChipText,
-                            aiTemplate === t.key && styles.aiChipTextActive,
+                            { color: colors.textPrimary },
+                            aiTemplate === t.key && { color: colors.onBrand },
                           ]}
                         >
                           {t.label}
@@ -616,18 +640,33 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 
                   {aiTemplate === 'rewrite_style' && (
                     <TextInput
-                      style={styles.styleInput}
+                      style={[
+                        styles.styleInput,
+                        {
+                          borderColor: colors.borderSubtle,
+                          backgroundColor: colors.bgElevated,
+                          color: colors.textPrimary,
+                        },
+                      ]}
                       value={styleOf}
                       onChangeText={setStyleOf}
                       placeholder="Style of (e.g. Emily Dickinson)"
+                      placeholderTextColor={colors.textMuted}
                     />
                   )}
 
                   <View style={styles.aiParams}>
                     <View style={styles.paramField}>
-                      <Text style={styles.paramLabel}>Temp</Text>
+                      <Text style={[styles.paramLabel, { color: colors.textMuted }]}>Temp</Text>
                       <TextInput
-                        style={styles.paramInput}
+                        style={[
+                          styles.paramInput,
+                          {
+                            borderColor: colors.borderSubtle,
+                            backgroundColor: colors.bgElevated,
+                            color: colors.textPrimary,
+                          },
+                        ]}
                         value={String(aiTemperature)}
                         keyboardType="numeric"
                         onChangeText={t =>
@@ -638,9 +677,16 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                       />
                     </View>
                     <View style={styles.paramField}>
-                      <Text style={styles.paramLabel}>Tokens</Text>
+                      <Text style={[styles.paramLabel, { color: colors.textMuted }]}>Tokens</Text>
                       <TextInput
-                        style={styles.paramInput}
+                        style={[
+                          styles.paramInput,
+                          {
+                            borderColor: colors.borderSubtle,
+                            backgroundColor: colors.bgElevated,
+                            color: colors.textPrimary,
+                          },
+                        ]}
                         value={String(aiMaxTokens)}
                         keyboardType="numeric"
                         onChangeText={t =>
@@ -761,7 +807,14 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                     key={theme}
                     style={[
                       styles.chip,
-                      selectedThemes.includes(theme) && styles.chipSelected,
+                      {
+                        backgroundColor: colors.bgCanvas,
+                        borderColor: colors.borderSubtle,
+                      },
+                      selectedThemes.includes(theme) && {
+                        backgroundColor: colors.brandPrimary,
+                        borderColor: colors.brandPrimary,
+                      },
                     ]}
                     onPress={() => toggleTheme(theme)}
                     disabled={
@@ -772,8 +825,11 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
                     <Text
                       style={[
                         styles.chipText,
-                        selectedThemes.includes(theme) &&
-                          styles.chipTextSelected,
+                        { color: colors.textSecondary },
+                        selectedThemes.includes(theme) && {
+                          color: colors.onBrand,
+                          fontWeight: '600',
+                        },
                       ]}
                     >
                       {theme}
@@ -884,14 +940,16 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  editorSheet: { flex: 1, paddingBottom: 0 },
-  folioCard: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 12 },
+  editorSheet: { flex: 1, minHeight: 0, paddingBottom: 0 },
+  folioCard: { flex: 1, minHeight: 0, borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 12 },
   header: {
     marginBottom: 12,
   },
   screenTitle: { fontSize: 20, fontWeight: 'bold', color: palette.parchment },
   textDark: { color: palette.parchment },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerActions: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap' },
+  toolBtn: { alignItems: 'center', minWidth: 52, paddingHorizontal: 4, paddingVertical: 2 },
+  toolCaption: { fontSize: 11, fontWeight: '600', marginTop: 2 },
   iconBtn: { padding: 4 },
   savedText: { fontSize: 11, color: palette.emerald, fontWeight: '600' },
   publishButton: {

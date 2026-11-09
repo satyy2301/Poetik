@@ -21,10 +21,10 @@ export const radius = {
 export const shadows = {
   card: {
     shadowColor: palette.ink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 2,
   } as ViewStyle,
   floating: {
     shadowColor: palette.emerald,

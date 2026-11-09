@@ -1,6 +1,17 @@
 // src/features/favorites/favoritesService.ts
 import { supabase } from '../../lib/supabase';
 
+export const isFavoritePoet = async (userId: string, poetId: string) => {
+  const { data, error } = await supabase
+    .from('user_favorite_poets')
+    .select('poet_id')
+    .eq('user_id', userId)
+    .eq('poet_id', poetId)
+    .maybeSingle();
+  if (error) throw error;
+  return !!data;
+};
+
 export const toggleFavoritePoet = async (userId: string, poetId: string) => {
   const { data: existing } = await supabase
     .from('user_favorite_poets')

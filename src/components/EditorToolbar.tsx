@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { palette } from '../theme/tokens/colors';
+import { useTheme } from '../context/ThemeContext';
 
 export type FormatAction =
   | 'bold'
@@ -24,77 +24,94 @@ type EditorToolbarProps = {
   darkMode?: boolean;
 };
 
-const EditorToolbar = ({ onAction, canUndo, canRedo, darkMode }: EditorToolbarProps) => {
-  const btnStyle = darkMode ? styles.btnDark : styles.btn;
-  const iconColor = palette.parchment;
+type Tool = {
+  action: FormatAction;
+  label: string;
+  mark?: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+};
 
-  const renderBtn = (action: FormatAction, label: string, icon?: keyof typeof Ionicons.glyphMap) => (
-    <TouchableOpacity
-      key={action}
-      style={[
-        btnStyle,
-        (action === 'undo' && !canUndo) || (action === 'redo' && !canRedo) ? styles.btnDisabled : null,
-      ]}
-      onPress={() => onAction(action)}
-      disabled={(action === 'undo' && !canUndo) || (action === 'redo' && !canRedo)}
-    >
-      {icon ? (
-        <Ionicons name={icon} size={16} color={iconColor} />
-      ) : (
-        <Text style={[styles.btnText, darkMode && styles.btnTextDark]}>{label}</Text>
-      )}
-    </TouchableOpacity>
-  );
+const TOOLS: Tool[] = [
+  { action: 'bold', label: 'Bold', mark: 'B' },
+  { action: 'italic', label: 'Italic', mark: 'I' },
+  { action: 'underline', label: 'Underline', mark: 'U' },
+  { action: 'strikethrough', label: 'Strike', mark: 'S' },
+  { action: 'link', label: 'Link', icon: 'link' },
+  { action: 'h1', label: 'H1', mark: 'H1' },
+  { action: 'h2', label: 'H2', mark: 'H2' },
+  { action: 'h3', label: 'H3', mark: 'H3' },
+  { action: 'ul', label: 'List', mark: '•' },
+  { action: 'ol', label: 'Numbered', mark: '1.' },
+  { action: 'undo', label: 'Undo', icon: 'arrow-undo' },
+  { action: 'redo', label: 'Redo', icon: 'arrow-redo' },
+];
+
+const EditorToolbar = ({ onAction, canUndo, canRedo }: EditorToolbarProps) => {
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.row}
+      contentContainerStyle={styles.rowContent}
       // Keep the editor selection when a format button is pressed.
       {...({ onMouseDown: (event: { preventDefault?: () => void }) => event.preventDefault?.() } as object)}
     >
-      {renderBtn('bold', 'B')}
-      {renderBtn('italic', 'I')}
-      {renderBtn('underline', 'U')}
-      {renderBtn('strikethrough', 'S')}
-      {renderBtn('link', '', 'link')}
-      {renderBtn('h1', 'H1')}
-      {renderBtn('h2', 'H2')}
-      {renderBtn('h3', 'H3')}
-      {renderBtn('ul', '•')}
-      {renderBtn('ol', '1.')}
-      {renderBtn('undo', '', 'arrow-undo')}
-      {renderBtn('redo', '', 'arrow-redo')}
+      {TOOLS.map((tool) => {
+        const disabled =
+          (tool.action === 'undo' && !canUndo) || (tool.action === 'redo' && !canRedo);
+        const accent = (tool.action === 'undo' && canUndo) || (tool.action === 'redo' && canRedo);
+        const color = accent ? colors.brandPrimary : colors.textSecondary;
+
+        return (
+          <TouchableOpacity
+            key={tool.action}
+            accessibilityRole="button"
+            accessibilityLabel={tool.label}
+            style={[
+              styles.btn,
+              {
+                borderColor: accent ? colors.brandPrimary : colors.borderSubtle,
+                backgroundColor: colors.bgSurface,
+              },
+              disabled && styles.btnDisabled,
+            ]}
+            onPress={() => onAction(tool.action)}
+            disabled={disabled}
+          >
+            {tool.icon ? (
+              <Ionicons name={tool.icon} size={14} color={color} />
+            ) : tool.mark && tool.mark !== tool.label ? (
+              <Text style={[styles.mark, { color }]}>{tool.mark}</Text>
+            ) : null}
+            <Text style={[styles.label, { color }]}>{tool.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   row: { flexGrow: 0, marginBottom: 8 },
+  rowContent: { alignItems: 'center', paddingRight: 4 },
   btn: {
-    backgroundColor: palette.spruce,
-    minWidth: 32,
-    height: 32,
+    minHeight: 32,
     borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 6,
     paddingHorizontal: 8,
-  },
-  btnDark: {
-    backgroundColor: palette.malachite,
-    minWidth: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 4,
   },
   btnDisabled: { opacity: 0.4 },
-  btnText: { fontWeight: '700', color: palette.parchment, fontSize: 13 },
-  btnTextDark: { color: palette.parchment },
+  mark: { fontWeight: '700', fontSize: 12 },
+  label: { fontWeight: '600', fontSize: 12 },
 });
 
 export default React.memo(EditorToolbar);

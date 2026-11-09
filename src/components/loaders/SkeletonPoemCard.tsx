@@ -66,10 +66,10 @@ const SkeletonPoemCard = () => {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     overflow: 'hidden',
   },
   bone: {

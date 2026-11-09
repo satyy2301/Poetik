@@ -14,8 +14,11 @@ const {
 } = require('./gutenbergSplit');
 
 const CACHE_DIR = path.join(__dirname, '../cache/gutenberg');
-const CATALOG_URL = 'https://gutendex.com/books/?topic=poetry&languages=en';
 const USER_AGENT = 'PoetikIngest/1.0 (public-domain poetry reader; contact local dev)';
+
+function catalogUrl(language) {
+  return `https://gutendex.com/books/?topic=poetry&languages=${encodeURIComponent(language)}`;
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -60,7 +63,7 @@ async function readBookText(bookId, url) {
   return text;
 }
 
-function bookMeta(book) {
+function bookMeta(book, language) {
   const author = book.authors?.[0];
   const deathYear = author?.death_year || null;
   return {
@@ -70,15 +73,18 @@ function bookMeta(book) {
     birthYear: author?.birth_year || null,
     deathYear,
     era: eraFromDeathYear(deathYear),
+    language: language || 'en',
+    subjects: book.subjects || [],
   };
 }
 
 /**
- * Walk the English poetry catalog. Calls onBookPoems(poems, meta) per book
- * that yields at least one poem. maxBooks limits downloaded texts (Infinity = all).
+ * Walk a Gutendex poetry catalog. language is a Gutendex code such as en, hi, or ur.
+ * Calls onBookPoems(poems, meta) per book that yields at least one poem.
+ * maxBooks limits downloaded texts (Infinity = all).
  */
-async function fetchGutenbergPoems({ maxBooks = Infinity, onBookPoems } = {}) {
-  let url = CATALOG_URL;
+async function fetchGutenbergPoems({ maxBooks = Infinity, onBookPoems, language = 'en' } = {}) {
+  let url = catalogUrl(language);
   let downloaded = 0;
   let yielded = 0;
   const all = [];
@@ -100,12 +106,12 @@ async function fetchGutenbergPoems({ maxBooks = Infinity, onBookPoems } = {}) {
       if (!textUrl) continue;
 
       downloaded += 1;
-      const meta = bookMeta(book);
+      const meta = bookMeta(book, language);
       try {
         const text = await readBookText(book.id, textUrl);
         const poems = splitGutenbergPoems(text, meta);
         yielded += poems.length;
-        console.log(`Gutenberg #${book.id} ${meta.title}: ${poems.length} poems`);
+        console.log(`Gutenberg ${language} #${book.id} ${meta.title}: ${poems.length} poems`);
         if (onBookPoems && poems.length > 0) await onBookPoems(poems, meta);
         else all.push(...poems);
       } catch (error) {
@@ -117,7 +123,7 @@ async function fetchGutenbergPoems({ maxBooks = Infinity, onBookPoems } = {}) {
     url = downloaded >= maxBooks ? null : page.next || null;
   }
 
-  console.log(`Gutenberg done. Books read: ${downloaded}. Poems parsed: ${yielded}.`);
+  console.log(`Gutenberg ${language} done. Books read: ${downloaded}. Poems parsed: ${yielded}.`);
   return onBookPoems ? [] : all;
 }
 

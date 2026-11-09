@@ -72,6 +72,7 @@ export const fetchPoems = async ({
   if (filters.era) query = query.ilike('era', filters.era);
   if (filters.theme) query = query.or(themeContainsFilter(filters.theme));
   if (filters.form) query = query.ilike('form', filters.form);
+  if (filters.language) query = query.eq('language', filters.language);
   if (filters.authorId) query = query.eq('author_id', filters.authorId);
 
   if (sort === 'popular') {
