@@ -39,6 +39,7 @@ export type FetchPoemsParams = {
   page?: number;
   filters?: PoemFilters;
   sort?: PoemSort;
+  shuffleSeed?: string;
 };
 
 export type FetchPoemsResult = {

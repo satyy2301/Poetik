@@ -13,7 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useOpenAI } from '../context/OpenAIContext';
@@ -45,9 +45,37 @@ import {
 } from '../services/aiWritingTools';
 import { logActivity } from '../services/activityService';
 import { palette } from '../theme/tokens/colors';
-import FolioHeader from '../components/ui/FolioHeader';
 
 type WriteScreenProps = { navigation: { navigate: (screen: string) => void } };
+
+function ToolButton({
+  label,
+  onPress,
+  disabled,
+  color,
+  children,
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  color: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.toolBtn}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      {children}
+      <Text style={[styles.toolCaption, { color }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 const POEM_CATEGORIES = [
   'Romantic',
@@ -421,118 +449,54 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
         {!headerHidden && (
           <View style={[styles.folioCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
             <View style={styles.header}>
-              <FolioHeader
-                kicker="WRITE"
-                title={editingId ? 'Edit poem' : 'New poem'}
-                sentence="Give it a title, then write the lines."
+              <TextInput
+                style={[styles.titleInput, { color: colors.textPrimary }]}
+                placeholder={editingId ? 'Edit poem' : 'Poem title'}
+                placeholderTextColor={colors.textMuted}
+                value={title}
+                onChangeText={setTitle}
               />
               <View style={styles.headerActions}>
-              {saveStatus === 'saved' && (
-                <Text
-                  style={[theme.typography.bodySm, { color: colors.success }]}
+                {saveStatus === 'saved' && (
+                  <Text style={[styles.savedText, { color: colors.success }]}>Saved</Text>
+                )}
+                <ToolButton label="Form" color={colors.textMuted} onPress={() => setShowTemplateModal(true)}>
+                  <Ionicons name="document-text-outline" size={16} color={colors.brandPrimary} />
+                </ToolButton>
+                {versions.length > 0 && (
+                  <ToolButton label="History" color={colors.textMuted} onPress={() => setShowVersionModal(true)}>
+                    <Ionicons name="time-outline" size={16} color={colors.brandPrimary} />
+                  </ToolButton>
+                )}
+                <ToolButton
+                  label="Suggest"
+                  color={colors.textMuted}
+                  onPress={FEATURES.AI_ENABLED ? requestAISuggestions : undefined}
+                  disabled={!FEATURES.AI_ENABLED || isAiLoading}
                 >
-                  Saved
-                </Text>
-              )}
-              <TouchableOpacity
-                onPress={() => setShowTemplateModal(true)}
-                style={styles.toolBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Form"
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={20}
-                  color={colors.brandPrimary}
-                />
-                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Form</Text>
-              </TouchableOpacity>
-              {versions.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setShowVersionModal(true)}
-                  style={styles.toolBtn}
-                  accessibilityRole="button"
-                  accessibilityLabel="History"
+                  <Ionicons name="sparkles-outline" size={16} color={FEATURES.AI_ENABLED ? colors.brandPrimary : colors.textSecondary} />
+                </ToolButton>
+                <ToolButton label="Focus" color={colors.textMuted} onPress={() => setFocusMode(true)}>
+                  <Ionicons name="contract" size={16} color={colors.brandPrimary} />
+                </ToolButton>
+                <ToolButton
+                  label={darkMode ? 'Day' : 'Night'}
+                  color={colors.textMuted}
+                  onPress={() => setDarkMode(!darkMode)}
                 >
-                  <Ionicons
-                    name="time-outline"
-                    size={20}
-                    color={colors.brandPrimary}
-                  />
-                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>History</Text>
-                </TouchableOpacity>
-              )}
-              {FEATURES.AI_ENABLED ? (
-                <TouchableOpacity
-                  onPress={requestAISuggestions}
-                  style={styles.toolBtn}
-                  disabled={isAiLoading}
-                  accessibilityRole="button"
-                  accessibilityLabel="Suggest"
-                >
-                  <MaterialIcons
-                    name="auto-awesome"
-                    size={20}
-                    color={colors.brandPrimary}
-                  />
-                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Suggest</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.toolBtn} disabled accessibilityLabel="Suggest">
-                  <Ionicons
-                    name="sparkles-outline"
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                  <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Suggest</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                onPress={() => setFocusMode(!focusMode)}
-                style={styles.toolBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Focus"
-              >
-                <Ionicons
-                  name={focusMode ? 'expand' : 'contract'}
-                  size={20}
-                  color={colors.brandPrimary}
-                />
-                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Focus</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setDarkMode(!darkMode)}
-                style={styles.toolBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Night"
-              >
-                <Ionicons
-                  name={darkMode ? 'sunny' : 'moon'}
-                  size={20}
-                  color={colors.brandPrimary}
-                />
-                <Text style={[styles.toolCaption, { color: colors.textMuted }]}>Night</Text>
-              </TouchableOpacity>
+                  <Ionicons name={darkMode ? 'sunny-outline' : 'moon-outline'} size={16} color={colors.brandPrimary} />
+                </ToolButton>
+              </View>
             </View>
-          </View>
-          {!focusMode && (
-            <TextInput
-              style={[styles.titleInput, { color: colors.textPrimary }]}
-              placeholder="Give your poem a title..."
-              placeholderTextColor={colors.textMuted}
-              value={title}
-              onChangeText={setTitle}
+            <RichTextEditor
+              ref={editorRef}
+              value={content}
+              onChange={setContent}
+              onStatsChange={handleStatsChange}
+              darkMode={darkMode}
+              focusMode={focusMode}
+              showToolbar={!focusMode}
             />
-          )}
-          <RichTextEditor
-            ref={editorRef}
-            value={content}
-            onChange={setContent}
-            onStatsChange={handleStatsChange}
-            darkMode={darkMode}
-            focusMode={focusMode}
-            showToolbar={!focusMode}
-          />
           </View>
         )}
 
@@ -941,15 +905,16 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   editorSheet: { flex: 1, minHeight: 0, paddingBottom: 0 },
-  folioCard: { flex: 1, minHeight: 0, borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 12 },
+  folioCard: { flex: 1, minHeight: 0, borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 8, marginBottom: 8 },
   header: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
-  screenTitle: { fontSize: 20, fontWeight: 'bold', color: palette.parchment },
-  textDark: { color: palette.parchment },
-  headerActions: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, flexWrap: 'wrap' },
-  toolBtn: { alignItems: 'center', minWidth: 52, paddingHorizontal: 4, paddingVertical: 2 },
-  toolCaption: { fontSize: 11, fontWeight: '600', marginTop: 2 },
+  headerActions: { flexDirection: 'row', alignItems: 'flex-start' },
+  toolBtn: { width: 44, alignItems: 'center', justifyContent: 'center', paddingTop: 2 },
+  toolCaption: { fontSize: 9, lineHeight: 12, fontWeight: '600', marginTop: 1 },
   iconBtn: { padding: 4 },
   savedText: { fontSize: 11, color: palette.emerald, fontWeight: '600' },
   publishButton: {
@@ -962,9 +927,10 @@ const styles = StyleSheet.create({
   publishText: { color: palette.ink, fontWeight: '600' },
   exitFocus: { position: 'absolute', top: 8, right: 8, zIndex: 10, padding: 8 },
   titleInput: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    paddingVertical: 6,
     color: palette.parchment,
   },
   titleInputDark: { color: palette.parchment },

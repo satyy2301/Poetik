@@ -19,6 +19,7 @@ import FollowingScreen from '../screens/FollowingScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import { deferScreen } from './lazyScreens';
 import { palette } from '../theme/tokens/colors';
+import { nativeStackMotion } from './motion';
 
 const ONBOARDING_KEY = 'poetik.onboardingSeen';
 
@@ -80,7 +81,13 @@ const RootNavigator = () => {
         if (routeName) trackScreen(routeName);
       }}
     >
-      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.canvas } }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: palette.canvas },
+          ...nativeStackMotion,
+        }}
+      >
         {user ? (
           <>
             <Stack.Screen name="App" component={AppNavigator} />

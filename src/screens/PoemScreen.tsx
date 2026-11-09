@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { incrementPoemLikes } from '../services/poemService';
 import { getUserPlaylists, addPoemToPlaylist, createPlaylist } from '../features/playlists/playlistService';
 import { openAuthorProfile, resolvePoemForDetail } from '../navigation/navigationHelpers';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Poem } from '../types/poem';
 import FormattedText from '../components/FormattedText';
 
@@ -27,7 +28,7 @@ const PoemScreen = () => {
   const route = useRoute<any>();
   const { theme } = useTheme();
   const colors = theme.colors;
-  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [poemData, setPoemData] = useState<Poem | null>(route.params?.poem || null);
   const [loading, setLoading] = useState(!route.params?.poem?.content);
@@ -62,8 +63,14 @@ const PoemScreen = () => {
 
   if (loading || !poemData) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={[styles.container, { backgroundColor: colors.bgCanvas, paddingTop: insets.top }]}>
+        <TouchableOpacity style={styles.headerSide} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          <Text style={[styles.headerLabel, { color: colors.textPrimary }]}>Back</Text>
+        </TouchableOpacity>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.brandPrimary} />
+        </View>
       </View>
     );
   }
@@ -164,49 +171,58 @@ const PoemScreen = () => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bgCanvas }]} contentContainerStyle={styles.scroll}>
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        <Text style={[theme.typography.labelMono, { color: colors.accent, marginLeft: 8 }]}>FOLIO</Text>
-      </TouchableOpacity>
-
-      <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>
-        {(poemData.form || 'VERSE').toUpperCase()}
-      </Text>
-      <Text style={[theme.typography.displaySm, { color: colors.textPrimary, marginTop: 8 }]}>{poemData.title}</Text>
-      <TouchableOpacity onPress={handleAuthorPress}>
-        <Text style={[theme.typography.bodyMd, { color: colors.brandSecondary, marginTop: 6 }]}>{authorName}</Text>
-      </TouchableOpacity>
-
-      <View style={[styles.well, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted, borderLeftColor: colors.brandPrimary }]}>
-        <FormattedText value={poemData.content} style={{ ...theme.typography.poemBody, color: colors.textPrimary }} />
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      <View style={[styles.header, { paddingTop: insets.top, borderBottomColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}>
+        <TouchableOpacity style={styles.headerSide} onPress={() => navigation.goBack()} accessibilityLabel="Back">
+          <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+          <Text style={[styles.headerLabel, { color: colors.textPrimary }]}>Back</Text>
+        </TouchableOpacity>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textSecondary }]}>{poemData.title}</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.metaRow}>
-        {poemData.form ? (
-          <Text style={[theme.typography.labelMono, { color: colors.accent }]}>{poemData.form.toUpperCase()}</Text>
-        ) : null}
-        {themeDisplay ? (
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{themeDisplay.toUpperCase()}</Text>
-        ) : null}
-        <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{wordCount} WORDS</Text>
-        {poemData.era ? (
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{poemData.era.toUpperCase()}</Text>
-        ) : null}
-      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={[theme.typography.displaySm, styles.title, { color: colors.textPrimary }]}>{poemData.title}</Text>
+        <TouchableOpacity onPress={handleAuthorPress} style={styles.authorRow}>
+          <Text style={[styles.authorName, { color: colors.brandSecondary }]}>{authorName}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.brandSecondary} />
+        </TouchableOpacity>
 
-      <View style={[styles.actions, { borderTopColor: colors.borderMuted }]}>
+        <View style={styles.metaRow}>
+          {poemData.form ? (
+            <Text style={[styles.metaChip, { color: colors.textSecondary, borderColor: colors.borderSubtle }]}>{poemData.form}</Text>
+          ) : null}
+          {poemData.language ? (
+            <Text style={[styles.metaChip, { color: colors.textSecondary, borderColor: colors.borderSubtle }]}>
+              {poemData.language === 'hi' ? 'Hindi' : poemData.language === 'ur' ? 'Urdu' : poemData.language === 'en' ? 'English' : poemData.language}
+            </Text>
+          ) : null}
+          {poemData.era ? (
+            <Text style={[styles.metaChip, { color: colors.textSecondary, borderColor: colors.borderSubtle }]}>{poemData.era}</Text>
+          ) : null}
+          {themeDisplay ? (
+            <Text style={[styles.metaChip, { color: colors.textSecondary, borderColor: colors.borderSubtle }]}>{themeDisplay}</Text>
+          ) : null}
+          <Text style={[styles.metaChip, { color: colors.textSecondary, borderColor: colors.borderSubtle }]}>{wordCount} words</Text>
+        </View>
+
+        <View style={[styles.well, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+          <FormattedText value={poemData.content} style={{ ...theme.typography.poemBody, color: colors.textPrimary }} />
+        </View>
+      </ScrollView>
+
+      <View style={[styles.actions, { borderTopColor: colors.borderMuted, backgroundColor: colors.bgCanvas, paddingBottom: Math.max(insets.bottom, 10) }]}>
         <TouchableOpacity style={styles.actionButton} onPress={handleLike} disabled={isLiking || isLiked}>
           <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={22} color={colors.likeHeart} />
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{poemData.like_count || 0}</Text>
+          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>{poemData.like_count || 0}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
-          <Ionicons name="bookmark-outline" size={22} color={colors.accent} />
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>SAVE</Text>
+          <Ionicons name="bookmark-outline" size={22} color={colors.brandSecondary} />
+          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Save</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-          <Ionicons name="share-social-outline" size={22} color={colors.textSecondary} />
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>SHARE</Text>
+          <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+          <Text style={[styles.actionLabel, { color: colors.textSecondary }]}>Share</Text>
         </TouchableOpacity>
       </View>
 
@@ -255,41 +271,59 @@ const PoemScreen = () => {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: 20, paddingTop: 48, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 28 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backButton: {
+  header: {
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  headerSide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 72,
     minHeight: 44,
+    paddingRight: 8,
+  },
+  headerLabel: { fontSize: 16, fontWeight: '600', marginLeft: 2 },
+  headerTitle: { flex: 1, fontSize: 14, textAlign: 'center' },
+  headerSpacer: { width: 72 },
+  title: { marginTop: 4 },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 8 },
+  authorName: { fontSize: 16, fontWeight: '600' },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  metaChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    overflow: 'hidden',
   },
   well: {
-    marginTop: 20,
-    borderWidth: 1,
-    borderLeftWidth: 2,
-    borderRadius: 8,
-    padding: 18,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
     marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 20,
-    paddingTop: 12,
     borderTopWidth: 1,
+    paddingTop: 8,
   },
-  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 8 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12 },
+  actionLabel: { fontSize: 13, fontWeight: '600' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(4, 17, 12, 0.72)',

@@ -17,6 +17,7 @@ import LessonDetailScreen from '../screens/LessonsDetailScreen';
 import QuizDetailScreen from '../screens/QuizDetailScreen';
 import AITutorScreen from '../screens/AITutorScreen';
 import { deferScreen } from './lazyScreens';
+import { stackMotion } from './motion';
 
 const LazyStudyTogetherScreen = deferScreen(() => import('../screens/StudyTogetherScreen'));
 const LazyChallengeDetailScreen = deferScreen(() => import('../screens/ChallengeDetailScreen'));
@@ -94,6 +95,7 @@ const MainTabNavigator = () => {
           backgroundColor: colors.bgCanvas,
           borderTopColor: colors.borderMuted,
         },
+        animation: 'fade',
         headerStyle: {
           backgroundColor: colors.bgSurface,
           borderBottomColor: colors.borderMuted,
@@ -108,7 +110,7 @@ const MainTabNavigator = () => {
         headerRight: HeaderIcons,
       })}
     >
-      <Tab.Screen name="Read" component={ReadScreenWithTabs} />
+      <Tab.Screen name="Read" component={ReadScreenWithTabs} options={{ headerShown: false }} />
       <Tab.Screen name="Write" component={WriteScreen} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Learn" component={LearnScreen} />
@@ -135,6 +137,7 @@ const AppNavigator = () => {
           fontWeight: '500',
         },
         cardStyle: { backgroundColor: colors.bgCanvas },
+        ...stackMotion,
       }}
     >
       <Stack.Screen 

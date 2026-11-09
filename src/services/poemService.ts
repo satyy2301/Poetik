@@ -25,6 +25,82 @@ const POEM_SELECT = `
 `;
 
 const DEFAULT_LIMIT = 20;
+const ID_PAGE = 1000;
+
+let shuffleDeck: { key: string; ids: string[] } | null = null;
+
+const shuffleIds = (ids: string[]) => {
+  const copy = [...ids];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    const current = copy[index];
+    copy[index] = copy[swap];
+    copy[swap] = current;
+  }
+  return copy;
+};
+
+const applyPoemFilters = (query: any, filters: FetchPoemsParams['filters'] = {}) => {
+  let next = query;
+  if (filters.followingOnly) next = next.in('author_id', filters.followingIds || []);
+  if (filters.era) next = next.ilike('era', filters.era);
+  if (filters.theme) next = next.or(themeContainsFilter(filters.theme));
+  if (filters.form) next = next.ilike('form', filters.form);
+  if (filters.language) next = next.eq('language', filters.language);
+  if (filters.authorId) next = next.eq('author_id', filters.authorId);
+  return next;
+};
+
+async function loadShuffleDeck(key: string, filters: FetchPoemsParams['filters'] = {}) {
+  if (shuffleDeck?.key === key) return shuffleDeck.ids;
+
+  const ids: string[] = [];
+  for (let from = 0; ; from += ID_PAGE) {
+    const { data, error } = await applyPoemFilters(
+      supabase.from('poems').select('id').eq('visibility', 'public'),
+      filters,
+    )
+      .order('id', { ascending: true })
+      .range(from, from + ID_PAGE - 1);
+    if (error) throw error;
+    for (const row of data || []) ids.push(row.id);
+    if (!data || data.length < ID_PAGE) break;
+  }
+
+  shuffleDeck = { key, ids: shuffleIds(ids) };
+  return shuffleDeck.ids;
+}
+
+async function fetchShuffledPoems({
+  limit,
+  page,
+  filters,
+  shuffleSeed,
+}: {
+  limit: number;
+  page: number;
+  filters: FetchPoemsParams['filters'];
+  shuffleSeed?: string;
+}): Promise<FetchPoemsResult> {
+  const key = [
+    shuffleSeed || 'feed',
+    filters?.era || '',
+    filters?.theme || '',
+    filters?.form || '',
+    filters?.language || '',
+    filters?.authorId || '',
+    filters?.followingOnly ? (filters.followingIds || []).join(',') : '',
+  ].join('|');
+  const ids = await loadShuffleDeck(key, filters);
+  const slice = ids.slice(page * limit, page * limit + limit);
+  if (slice.length === 0) return { poems: [], hasMore: false };
+
+  const { data, error } = await supabase.from('poems').select(POEM_SELECT).in('id', slice);
+  if (error) throw error;
+  const byId = new Map((data || []).map((row) => [row.id, normalizeAuthor(row)]));
+  const poems = slice.map((id) => byId.get(id)).filter((poem): poem is Poem => Boolean(poem));
+  return { poems, hasMore: (page + 1) * limit < ids.length };
+}
 
 const themeContainsFilter = (theme: string) => {
   const variants = Array.from(new Set([theme, theme.toLowerCase(), theme.toUpperCase()]));
@@ -54,31 +130,26 @@ export const fetchPoems = async ({
   page = 0,
   filters = {},
   sort = 'newest',
+  shuffleSeed,
 }: FetchPoemsParams): Promise<FetchPoemsResult> => {
+  if (filters.followingOnly && !filters.followingIds?.length) {
+    return { poems: [], hasMore: false };
+  }
+
+  if (sort === 'random') {
+    return fetchShuffledPoems({ limit, page, filters, shuffleSeed });
+  }
+
   const from = page * limit;
   const to = from + limit;
 
-  let query = supabase
-    .from('poems')
-    .select(POEM_SELECT)
-    .eq('visibility', 'public');
-
-  if (filters.followingOnly) {
-    if (!filters.followingIds?.length) {
-      return { poems: [], hasMore: false };
-    }
-    query = query.in('author_id', filters.followingIds);
-  }
-  if (filters.era) query = query.ilike('era', filters.era);
-  if (filters.theme) query = query.or(themeContainsFilter(filters.theme));
-  if (filters.form) query = query.ilike('form', filters.form);
-  if (filters.language) query = query.eq('language', filters.language);
-  if (filters.authorId) query = query.eq('author_id', filters.authorId);
+  let query = applyPoemFilters(
+    supabase.from('poems').select(POEM_SELECT).eq('visibility', 'public'),
+    filters,
+  );
 
   if (sort === 'popular') {
     query = query.order('like_count', { ascending: false }).order('created_at', { ascending: false });
-  } else if (sort === 'random') {
-    query = query.order('id', { ascending: true });
   } else {
     query = query.order('created_at', { ascending: false });
   }
@@ -86,11 +157,7 @@ export const fetchPoems = async ({
   const { data, error } = await query.range(from, to);
   if (error) throw error;
 
-  let rows = (data || []).map(normalizeAuthor);
-  if (sort === 'random' && rows.length > 0) {
-    rows = [...rows].sort(() => Math.random() - 0.5);
-  }
-
+  const rows = (data || []).map(normalizeAuthor);
   return {
     poems: rows.slice(0, limit),
     hasMore: rows.length > limit,

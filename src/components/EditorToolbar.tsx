@@ -82,11 +82,10 @@ const EditorToolbar = ({ onAction, canUndo, canRedo }: EditorToolbarProps) => {
             disabled={disabled}
           >
             {tool.icon ? (
-              <Ionicons name={tool.icon} size={14} color={color} />
-            ) : tool.mark && tool.mark !== tool.label ? (
+              <Ionicons name={tool.icon} size={16} color={color} />
+            ) : (
               <Text style={[styles.mark, { color }]}>{tool.mark}</Text>
-            ) : null}
-            <Text style={[styles.label, { color }]}>{tool.label}</Text>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -95,23 +94,19 @@ const EditorToolbar = ({ onAction, canUndo, canRedo }: EditorToolbarProps) => {
 };
 
 const styles = StyleSheet.create({
-  row: { flexGrow: 0, marginBottom: 8 },
+  row: { flexGrow: 0, marginBottom: 4 },
   rowContent: { alignItems: 'center', paddingRight: 4 },
   btn: {
-    minHeight: 32,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     borderWidth: 1,
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 4,
+    marginRight: 4,
   },
   btnDisabled: { opacity: 0.4 },
   mark: { fontWeight: '700', fontSize: 12 },
-  label: { fontWeight: '600', fontSize: 12 },
 });
 
 export default React.memo(EditorToolbar);

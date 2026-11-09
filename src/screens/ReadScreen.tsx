@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import PoemCard from '../components/PoemCard';
@@ -33,7 +33,8 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
     language: null,
     authorId: null,
   });
-  const [sort, setSort] = useState<PoemSort>('newest');
+  const [sort, setSort] = useState<PoemSort>('random');
+  const feedSeed = useRef(String(Date.now()));
   const navigation = useNavigation<any>();
 
   const loadPage = useCallback(
@@ -53,6 +54,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
             followingIds,
           },
           sort,
+          shuffleSeed: feedSeed.current,
         });
 
         setPoems((prev) => (reset ? result.poems : [...prev, ...result.poems]));
@@ -73,6 +75,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   }, [filters, sort, feedMode]);
 
   const handleRefresh = () => {
+    feedSeed.current = String(Date.now());
     setRefreshing(true);
     setHasMore(true);
     hapticLight();
@@ -170,7 +173,7 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   feedContent: { flex: 1 },
-  list: { paddingTop: 12, paddingBottom: 28 },
+  list: { paddingTop: 4, paddingBottom: 28 },
 });
 
 export default ReadScreen;
