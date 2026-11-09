@@ -95,6 +95,7 @@ const LessonFlow = ({ lesson, onComplete }: { lesson: Lesson; onComplete: () => 
               style={styles.responseInput}
               multiline
               placeholder="Write your response here..."
+              placeholderTextColor={palette.ghost}
               value={userResponse}
               onChangeText={setUserResponse}
             />

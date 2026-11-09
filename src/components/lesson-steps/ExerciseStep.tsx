@@ -17,6 +17,7 @@ const ExerciseStep = ({ step, value, onChange }: ExerciseStepProps) => (
       style={styles.input}
       multiline
       placeholder="Write your response here..."
+      placeholderTextColor={palette.ghost}
       value={value}
       onChangeText={onChange}
       textAlignVertical="top"
@@ -35,6 +36,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
+    color: palette.parchment,
     backgroundColor: palette.canvas,
   },
 });

@@ -39,6 +39,8 @@ export type Quiz = {
   id: string;
   lesson_id?: string | null;
   title?: string;
+  lessonType?: string;
+  lessonOrder?: number;
   questions: QuizQuestion[];
   created_at?: string;
 };

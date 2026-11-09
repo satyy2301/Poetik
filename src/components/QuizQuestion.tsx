@@ -13,7 +13,6 @@ type QuizQuestionProps = {
 
 const QuizQuestion = ({
   question,
-  questionIndex,
   selectedAnswer,
   onSelect,
   showResult = false,
@@ -23,7 +22,6 @@ const QuizQuestion = ({
   if (type === 'fill_in') {
     return (
       <View style={styles.container}>
-        <Text style={styles.number}>Question {questionIndex + 1}</Text>
         <Text style={styles.question}>{question.question}</Text>
         <TextInput
           style={styles.input}
@@ -31,6 +29,7 @@ const QuizQuestion = ({
           onChangeText={onSelect}
           editable={!showResult}
           placeholder="Your answer"
+          placeholderTextColor={palette.ghost}
         />
       </View>
     );
@@ -41,12 +40,12 @@ const QuizQuestion = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.number}>Question {questionIndex + 1}</Text>
       <Text style={styles.question}>{question.question}</Text>
       {options.map((option, index) => {
         const isSelected = selectedAnswer === index;
         const isCorrect = showResult && index === question.answerIndex;
         const isWrong = showResult && isSelected && index !== question.answerIndex;
+        const letter = String.fromCharCode(65 + index);
 
         return (
           <TouchableOpacity
@@ -60,6 +59,9 @@ const QuizQuestion = ({
             onPress={() => !showResult && onSelect(index)}
             disabled={showResult}
           >
+            <View style={[styles.letter, (isSelected || isCorrect) && styles.letterOn, isWrong && styles.letterWrong]}>
+              <Text style={[styles.letterText, (isSelected || isCorrect) && styles.letterTextOn]}>{letter}</Text>
+            </View>
             <Text style={styles.optionText}>{option}</Text>
           </TouchableOpacity>
         );
@@ -75,26 +77,41 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  number: { color: palette.ghost, fontSize: 12, marginBottom: 6 },
-  question: { fontSize: 17, fontWeight: '700', color: palette.parchment, marginBottom: 12 },
+  question: { fontSize: 18, fontWeight: '700', color: palette.parchment, marginBottom: 14, lineHeight: 26 },
   option: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: palette.canvas,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: palette.border,
   },
+  letter: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.spruce,
+  },
+  letterOn: { backgroundColor: palette.emerald },
+  letterWrong: { backgroundColor: palette.errorContainer },
+  letterText: { color: palette.glacial, fontWeight: '700', fontSize: 13 },
+  letterTextOn: { color: palette.ink },
   selected: { borderColor: palette.emerald, backgroundColor: palette.veil },
   correct: { borderColor: palette.emerald, backgroundColor: palette.malachite },
   wrong: { borderColor: palette.error, backgroundColor: palette.errorContainer },
-  optionText: { color: palette.parchment, fontSize: 15 },
+  optionText: { color: palette.parchment, fontSize: 15, flex: 1 },
   input: {
     borderWidth: 1,
     borderColor: palette.onSurfaceVariant,
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
+    color: palette.parchment,
   },
 });
 

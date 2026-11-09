@@ -262,6 +262,7 @@ const CommunityScreen = () => {
             <TextInput
               style={styles.postInput}
               placeholder="Share your thoughts about poetry..."
+              placeholderTextColor={palette.ghost}
               multiline
               value={newPostContent}
               onChangeText={setNewPostContent}

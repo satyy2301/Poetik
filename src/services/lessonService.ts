@@ -1,5 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { Lesson } from '../types/lesson';
+import { withTrackLocks } from './lessonLocks';
+
+export { withTrackLocks };
 
 export const fetchLessonsWithProgress = async (userId?: string): Promise<Lesson[]> => {
   const { data: lessons, error } = await supabase
@@ -20,20 +23,7 @@ export const fetchLessonsWithProgress = async (userId?: string): Promise<Lesson[
     completedIds = (userLessons || []).map((row) => row.lesson_id);
   }
 
-  const lessonList = (lessons || []) as Lesson[];
-
-  return lessonList.map((lesson, index) => {
-    const prevLesson = lessonList[index - 1];
-    const prerequisiteMet = !prevLesson || completedIds.includes(prevLesson.id);
-    const completed = completedIds.includes(lesson.id);
-
-    return {
-      ...lesson,
-      completed,
-      locked: !prerequisiteMet && !completed,
-      progress: completed ? 1 : 0,
-    };
-  });
+  return withTrackLocks((lessons || []) as Lesson[], completedIds);
 };
 
 export const completeLesson = async (

@@ -9,6 +9,16 @@ export type DailyChallenge = {
   lesson_id?: string | null;
 };
 
+export const fetchSeededChallenges = async (): Promise<DailyChallenge[]> => {
+  const { data, error } = await supabase
+    .from('daily_challenges')
+    .select('*')
+    .order('date', { ascending: true });
+
+  if (error) throw error;
+  return (data || []) as DailyChallenge[];
+};
+
 export const getTodaysChallenge = async (): Promise<DailyChallenge | null> => {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -29,6 +39,16 @@ export const getTodaysChallenge = async (): Promise<DailyChallenge | null> => {
     .maybeSingle();
 
   return (latest as DailyChallenge) || null;
+};
+
+export const fetchCompletedChallengeIds = async (userId: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('user_challenges')
+    .select('challenge_id')
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return (data || []).map((row) => row.challenge_id as string);
 };
 
 export const hasCompletedChallenge = async (userId: string, challengeId: string) => {

@@ -838,6 +838,7 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
               <Text style={styles.modalTitle}>OpenAI API Key</Text>
               <TextInput
                 placeholder="sk-..."
+                placeholderTextColor={palette.ghost}
                 value={localApiKey}
                 onChangeText={setLocalApiKey}
                 style={styles.apiKeyInput}
@@ -1090,6 +1091,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
+    color: palette.parchment,
   },
   previewBody: { color: palette.onSurface, lineHeight: 24 },
 });

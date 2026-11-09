@@ -58,6 +58,7 @@ const ChallengeSystem = ({ challenge, onComplete }: { challenge: any; onComplete
         style={styles.input}
         multiline
         placeholder="Write your poem here..."
+        placeholderTextColor={palette.ghost}
         value={userSubmission}
         onChangeText={setUserSubmission}
       />
@@ -123,6 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     fontSize: 16,
+    color: palette.parchment,
     textAlignVertical: 'top',
     marginBottom: 20,
     shadowColor: palette.canvas,

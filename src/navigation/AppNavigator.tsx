@@ -15,13 +15,13 @@ import MessagesScreen from '../screens/MessagesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import LessonDetailScreen from '../screens/LessonsDetailScreen';
 import QuizDetailScreen from '../screens/QuizDetailScreen';
+import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
+import QuizListScreen from '../screens/QuizListScreen';
 import AITutorScreen from '../screens/AITutorScreen';
 import { deferScreen } from './lazyScreens';
 import { stackMotion } from './motion';
 
 const LazyStudyTogetherScreen = deferScreen(() => import('../screens/StudyTogetherScreen'));
-const LazyChallengeDetailScreen = deferScreen(() => import('../screens/ChallengeDetailScreen'));
-const LazyQuizListScreen = deferScreen(() => import('../screens/QuizListScreen'));
 const LazyModerationQueueScreen = deferScreen(() => import('../screens/admin/ModerationQueueScreen'));
 const LazyReportsScreen = deferScreen(() => import('../screens/admin/ReportsScreen'));
 import AchievementsScreen from '../screens/AchievementsScreen';
@@ -148,8 +148,8 @@ const AppNavigator = () => {
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="LessonDetail" component={LessonDetailScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ChallengeDetail" component={LazyChallengeDetailScreen} />
-      <Stack.Screen name="QuizList" component={LazyQuizListScreen} />
+      <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
+      <Stack.Screen name="QuizList" component={QuizListScreen} options={{ title: 'Quizzes' }} />
       <Stack.Screen name="QuizDetail" component={QuizDetailScreen} options={{ title: 'Quiz' }} />
       <Stack.Screen name="AITutor" component={AITutorScreen} />
       <Stack.Screen

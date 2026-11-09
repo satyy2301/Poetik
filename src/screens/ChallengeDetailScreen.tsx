@@ -60,6 +60,7 @@ const ChallengeDetailScreen = ({ route, navigation }: any) => {
         style={styles.input}
         multiline
         placeholder="Write your poem here..."
+        placeholderTextColor={palette.ghost}
         value={submission}
         onChangeText={setSubmission}
         textAlignVertical="top"
@@ -100,6 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     fontSize: 16,
+    color: palette.parchment,
     borderWidth: 1,
     borderColor: palette.border,
     marginBottom: 16,
