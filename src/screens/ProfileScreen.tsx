@@ -12,7 +12,6 @@ import PoemCard from '../components/PoemCard';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import EmptyState from '../components/ui/EmptyState';
 import Button from '../components/ui/Button';
-import FolioHeader from '../components/ui/FolioHeader';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { fetchUserAchievements } from '../services/achievementService';
@@ -187,65 +186,78 @@ const ProfileScreen = ({ route }: any) => {
     <ScrollView style={[styles.container, { backgroundColor: colors.bgCanvas }]} showsVerticalScrollIndicator={false}>
       <ScreenContainer maxWidth={theme.layout.splitPaneMaxWidth} edges={[]} scrollable={false} contentStyle={styles.profileContent}>
         <View style={[styles.heroCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
-          <FolioHeader
-            kicker="PROFILE"
-            title={isOwnProfile ? 'Your folio' : `@${handle}`}
-            sentence={isOwnProfile ? 'Your poems, saved verses, and playlists.' : 'Poems from this writer.'}
-          />
           <View style={styles.profileHeader}>
-          <View style={[styles.avatar, { backgroundColor: colors.brandPrimary }]}>
-            <Text style={styles.avatarText}>{authorInitial}</Text>
+            <View style={[styles.avatarRing, { borderColor: colors.brandPrimary }]}>
+              <View style={[styles.avatar, { backgroundColor: colors.brandPrimary }]}>
+                <Text style={styles.avatarText}>{authorInitial}</Text>
+              </View>
+            </View>
+            <View style={styles.headerInfo}>
+              <Text style={[styles.handle, { color: colors.textPrimary }]} numberOfLines={1}>@{handle}</Text>
+              <Text style={[theme.typography.bodySm, { color: colors.textMuted, marginTop: 2 }]}>
+                {isOwnProfile ? 'Poet and writer' : 'Poet on Poetik'}
+              </Text>
+            </View>
+            <View style={styles.headerActions}>
+              {isOwnProfile ? (
+                <>
+                  <TouchableOpacity
+                    onPress={() => {}}
+                    accessibilityLabel="Edit profile"
+                    style={[styles.iconBtn, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}
+                  >
+                    <Ionicons name="create-outline" size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowOverflow(true)}
+                    accessibilityLabel="More"
+                    style={[styles.iconBtn, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    onPress={handleFollowToggle}
+                    accessibilityLabel={isFollowing ? 'Following' : 'Follow'}
+                    style={[
+                      styles.followBtn,
+                      {
+                        borderColor: isFollowing ? colors.borderMuted : colors.brandPrimary,
+                        backgroundColor: isFollowing ? colors.bgCanvas : colors.brandPrimary,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.followText, { color: isFollowing ? colors.textPrimary : colors.onBrand }]}>
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleFavoriteAuthor}
+                    disabled={favoriteLoading}
+                    accessibilityLabel={isFavoriteAuthor ? 'Favourited' : 'Favourite'}
+                    style={[styles.iconBtn, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}
+                  >
+                    <Ionicons
+                      name={isFavoriteAuthor ? 'star' : 'star-outline'}
+                      size={16}
+                      color={colors.brandPrimary}
+                    />
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
-          <View style={styles.headerInfo}>
-            <Text style={[theme.typography.displaySm, { color: colors.textPrimary }]}>@{handle}</Text>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4 }]}>
-              {isOwnProfile ? 'Poet & writer' : 'Poet on Poetik'}
-            </Text>
-          </View>
-          <View style={styles.headerActions}>
-            {isOwnProfile ? (
-              <>
-                <Button title="Edit Profile" onPress={() => {}} variant="secondary" size="compact" />
-                <TouchableOpacity onPress={() => setShowOverflow(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="ellipsis-horizontal" size={24} color={colors.textPrimary} />
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Button
-                  title={isFollowing ? 'Following' : 'Follow'}
-                  onPress={handleFollowToggle}
-                  variant={isFollowing ? 'secondary' : 'primary'}
-                  size="compact"
-                />
-                <TouchableOpacity
-                  onPress={handleFavoriteAuthor}
-                  disabled={favoriteLoading}
-                  accessibilityLabel={isFavoriteAuthor ? 'Favourited' : 'Favourite'}
-                  style={[styles.favBtn, { borderColor: colors.borderMuted, backgroundColor: colors.bgCanvas }]}
-                >
-                  <Ionicons
-                    name={isFavoriteAuthor ? 'star' : 'star-outline'}
-                    size={16}
-                    color={colors.brandPrimary}
-                  />
-                  <Text style={[theme.typography.labelBold, { color: colors.brandPrimary }]}>
-                    {isFavoriteAuthor ? 'Favourited' : 'Favourite'}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
 
-        <View style={[styles.statsCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
-          {stats.map((stat) => (
-            <TouchableOpacity key={stat.label} style={styles.statItem} onPress={stat.onPress}>
-              <Text style={[theme.typography.statNumber, { color: colors.textPrimary }]}>{stat.value}</Text>
-              <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>{stat.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <View style={[styles.statsCard, { borderTopColor: colors.borderMuted }]}>
+            {stats.map((stat) => (
+              <TouchableOpacity key={stat.label} style={styles.statItem} onPress={stat.onPress}>
+                <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]}>{stat.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {isOwnProfile && achievements.length > 0 && (
@@ -265,18 +277,21 @@ const ProfileScreen = ({ route }: any) => {
           </TouchableOpacity>
         )}
 
-        <View style={[styles.tabs, { borderBottomColor: colors.borderMuted }]}>
-          {['poems', 'favorites', ...(isOwnProfile ? ['playlists'] : [])].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && { borderBottomColor: colors.brandPrimary }]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[theme.typography.labelBold, { color: activeTab === tab ? colors.brandPrimary : colors.textSecondary }]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[styles.tabs, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
+          {['poems', 'favorites', ...(isOwnProfile ? ['playlists'] : [])].map((tab) => {
+            const selected = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[styles.tab, selected && { backgroundColor: colors.brandPrimary }]}
+                onPress={() => setActiveTab(tab)}
+              >
+                <Text style={[styles.tabLabel, { color: selected ? colors.onBrand : colors.textSecondary }]}>
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {activeTab === 'playlists' && isOwnProfile && (
@@ -288,7 +303,7 @@ const ProfileScreen = ({ route }: any) => {
 
         {activeTab === 'poems' && (
           <>
-            <View style={[styles.searchWrap, { borderColor: colors.borderMuted, backgroundColor: colors.bgSurface }]}>
+            <View style={[styles.searchWrap, { borderColor: colors.borderMuted, backgroundColor: colors.bgElevated }]}>
               <Ionicons name="search" size={16} color={colors.textSecondary} />
               <TextInput
                 value={poemQuery}
@@ -426,25 +441,32 @@ const ProfileScreen = ({ route }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   profileContent: { paddingBottom: 32 },
-  heroCard: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 16 },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
-  avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: palette.ink, fontSize: 28, fontFamily: 'Inter-Bold' },
-  headerInfo: { flex: 1 },
+  heroCard: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingTop: 16, marginBottom: 14 },
+  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarRing: { padding: 3, borderRadius: 32, borderWidth: 1 },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: palette.ink, fontSize: 22, fontFamily: 'Inter-Bold' },
+  headerInfo: { flex: 1, minWidth: 0 },
+  handle: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter-Bold' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  followBtn: { borderWidth: 1, borderRadius: 17, paddingHorizontal: 14, height: 34, alignItems: 'center', justifyContent: 'center' },
+  followText: { fontSize: 13, fontFamily: 'Inter-Bold' },
   statsCard: {
     flexDirection: 'row',
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingVertical: 16,
-    marginBottom: 16,
+    borderTopWidth: 1,
+    marginTop: 14,
+    paddingVertical: 12,
   },
-  statItem: { flex: 1, alignItems: 'center' },
+  statItem: { flex: 1, alignItems: 'center', gap: 2 },
+  statValue: { fontSize: 16, lineHeight: 20, fontFamily: 'Inter-Bold' },
+  statLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0.2 },
   badgesRow: { paddingVertical: 12, borderBottomWidth: 1, marginBottom: 8 },
   badgesList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   badgeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 4, maxWidth: 140 },
-  tabs: { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 12 },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 14, padding: 3, marginBottom: 14, gap: 3 },
+  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 11 },
+  tabLabel: { fontSize: 13, fontFamily: 'Inter-Bold' },
   panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   playlistItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 8, borderRadius: 12, borderWidth: 1, gap: 12 },
   favAuthors: { marginBottom: 16 },
@@ -455,21 +477,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 42,
-    marginBottom: 12,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    minHeight: 40,
+    marginBottom: 14,
   },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
-  favBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 16 },
   overflowMenu: { borderRadius: 12, borderWidth: 1, padding: 8, minWidth: 220 },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
