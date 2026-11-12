@@ -43,9 +43,9 @@ const OnboardingScreen = ({ onDone, onSignIn }: OnboardingScreenProps) => {
               />
             ))}
           </View>
-          <Text style={[theme.typography.labelMono, styles.kicker, { color: colors.brandSecondary }]}>{kickers[index]}</Text>
+          <Text style={[styles.meta, styles.kicker, { color: colors.brandSecondary }]}>{kickers[index]}</Text>
           <TouchableOpacity onPress={onDone} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={[theme.typography.labelBold, { color: colors.textSecondary }]}>Skip</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>Skip</Text>
           </TouchableOpacity>
         </View>
 
@@ -60,13 +60,13 @@ const OnboardingScreen = ({ onDone, onSignIn }: OnboardingScreenProps) => {
           onPress={advance}
           activeOpacity={0.9}
         >
-          <Text style={[theme.typography.labelBold, { color: colors.onBrand }]}>{ctas[index]}</Text>
+          <Text style={[styles.buttonLabel, { color: colors.onBrand }]}>{ctas[index]}</Text>
           <Ionicons name="arrow-forward" size={18} color={colors.onBrand} />
         </TouchableOpacity>
 
         {index === 2 ? (
           <TouchableOpacity onPress={onSignIn ?? onDone} style={styles.signIn}>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+            <Text style={[styles.copy, { color: colors.textPrimary, textAlign: 'center' }]}>
               Already a poet? <Text style={{ color: colors.brandSecondary }}>Sign In</Text>
             </Text>
           </TouchableOpacity>
@@ -96,8 +96,8 @@ const Chip = ({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: st
   const colors = theme.colors;
   return (
     <View style={[styles.chip, { backgroundColor: colors.bgCanvas, borderColor: colors.borderMuted }]}>
-      <Ionicons name={icon} size={12} color={colors.brandSecondary} />
-      <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>{label}</Text>
+      <Ionicons name={icon} size={16} color={colors.brandSecondary} />
+      <Text style={[styles.meta, { color: colors.textPrimary }]}>{label}</Text>
     </View>
   );
 };
@@ -115,33 +115,33 @@ const ReadPreview = () => {
         <View style={styles.cardTop}>
           <View style={[styles.pill, { backgroundColor: colors.bgElevated }]}>
             <View style={[styles.pip, { backgroundColor: colors.brandSecondary }]} />
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>EVENING POEM</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>EVENING POEM</Text>
           </View>
-          <Text style={[theme.typography.labelMono, { color: colors.accent }]}>SONNET</Text>
+          <Text style={[styles.meta, { color: colors.textPrimary }]}>SONNET</Text>
         </View>
         <Text style={[theme.typography.poemTitle, { color: colors.textPrimary, marginTop: 12 }]}>A Nocturne in Emerald</Text>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary, fontStyle: 'italic', marginTop: 4 }]}>
+        <Text style={[styles.copy, { color: colors.textPrimary, fontStyle: 'italic', marginTop: 4 }]}>
           by R. Vance · Sonnet
         </Text>
         <View style={[styles.verseWell, { backgroundColor: colors.bgCanvas, borderColor: colors.borderMuted, borderLeftColor: colors.brandPrimary }]}>
-          <Text style={[theme.typography.poemBody, { color: colors.textPrimary }]}>
+          <Text style={[styles.verse, { color: colors.textPrimary }]}>
             "The lantern wavers in the quiet crypt,{'\n'}
             A spool of gilded hours unwind in dust;{'\n'}
             Where antique quills in resin wax are dipped,{'\n'}
             We weigh the quiet silence that we trust."
           </Text>
           <View style={styles.verseFoot}>
-            <Text style={[theme.typography.labelMono, { color: colors.accent }]}>RHYMING LINES</Text>
-            <Text style={[theme.typography.labelMono, { color: colors.textMuted }]}>VERSE 1 OF 4</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>RHYMING LINES</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>VERSE 1 OF 4</Text>
           </View>
         </View>
         <View style={styles.player}>
           <View style={[styles.play, { backgroundColor: colors.brandPrimary }]}>
-            <Ionicons name="play" size={14} color={colors.onBrand} />
+            <Ionicons name="play" size={16} color={colors.onBrand} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[theme.typography.bodySm, { color: colors.textPrimary }]}>Read by Julian Dane</Text>
-            <Text style={[theme.typography.labelMono, { color: colors.textMuted, marginTop: 2 }]}>2 MIN READ</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary }]}>Read by Julian Dane</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary, marginTop: 2 }]}>2 MIN READ</Text>
           </View>
           <View style={[styles.track, { backgroundColor: colors.bgElevated }]}>
             <View style={[styles.trackFill, { backgroundColor: colors.brandPrimary }]} />
@@ -152,9 +152,9 @@ const ReadPreview = () => {
         <Chip icon="create-outline" label="NOTES IN THE MARGIN" />
         <Chip icon="bookmark-outline" label="SAVE FOR LATER" />
       </View>
-      <Text style={[theme.typography.labelMono, styles.eyebrow, { color: colors.brandSecondary }]}>READ</Text>
+      <Text style={[styles.meta, styles.eyebrow, { color: colors.brandSecondary }]}>READ</Text>
       <Text style={[theme.typography.displaySm, styles.title, { color: colors.textPrimary }]}>Read poems</Text>
-      <Text style={[theme.typography.bodyMd, styles.body, { color: colors.textSecondary }]}>
+      <Text style={[styles.copy, styles.body, { color: colors.textPrimary }]}>
         Find poems from classic and new writers. Save the ones you want to come back to.
       </Text>
     </View>
@@ -175,15 +175,15 @@ const WritePreview = () => {
       <View style={[styles.card, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
         <View style={styles.cardTop}>
           <View>
-            <Text style={[theme.typography.labelMono, { color: colors.accent }]}>DRAFT</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>DRAFT</Text>
             <Text style={[theme.typography.poemTitle, { color: colors.textPrimary, marginTop: 4 }]}>A quiet evening</Text>
           </View>
           <View style={[styles.pill, { backgroundColor: colors.bgElevated }]}>
             <View style={[styles.pip, { backgroundColor: colors.brandSecondary }]} />
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>10 SYLLABLES</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>10 SYLLABLES</Text>
           </View>
         </View>
-        <Text style={[theme.typography.poemBody, { color: colors.textSecondary, marginTop: 14 }]}>
+        <Text style={[styles.verse, { color: colors.textPrimary, marginTop: 14 }]}>
           The quiet quill invites an emerald flame,
         </Text>
         <View style={[styles.activeLine, { borderLeftColor: colors.brandPrimary, backgroundColor: colors.bgCanvas }]}>
@@ -197,22 +197,22 @@ const WritePreview = () => {
         </View>
         <View style={[styles.rhymeBox, { backgroundColor: colors.bgCanvas, borderColor: colors.borderMuted }]}>
           <View style={styles.cardTop}>
-            <Text style={[theme.typography.labelMono, { color: colors.accent }]}>RHYME IDEAS</Text>
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>SUGGESTIONS</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>RHYME IDEAS</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>SUGGESTIONS</Text>
           </View>
           <View style={styles.rhymeRow}>
             {rhymes.map((rhyme) => (
               <View key={rhyme.word} style={[styles.rhymeChip, { borderColor: colors.borderSubtle, backgroundColor: colors.bgSurface }]}>
-                <Text style={[theme.typography.bodyMd, { color: colors.textPrimary }]}>{rhyme.word}</Text>
-                <Text style={[theme.typography.labelMono, { color: colors.textMuted }]}>{rhyme.note}</Text>
+                <Text style={[styles.copy, { color: colors.textPrimary }]}>{rhyme.word}</Text>
+                <Text style={[styles.meta, { color: colors.textPrimary, marginTop: 4 }]}>{rhyme.note}</Text>
               </View>
             ))}
           </View>
         </View>
       </View>
-      <Text style={[theme.typography.labelMono, styles.eyebrow, { color: colors.brandSecondary }]}>WRITE</Text>
+      <Text style={[styles.meta, styles.eyebrow, { color: colors.brandSecondary }]}>WRITE</Text>
       <Text style={[theme.typography.displaySm, styles.title, { color: colors.textPrimary }]}>Write your own</Text>
-      <Text style={[theme.typography.bodyMd, styles.body, { color: colors.textSecondary }]}>
+      <Text style={[styles.copy, styles.body, { color: colors.textPrimary }]}>
         Start a draft. Try a sonnet or a haiku, or write in free verse.
       </Text>
     </View>
@@ -226,58 +226,58 @@ const LearnPreview = () => {
     <View>
       <View style={[styles.card, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
         <View style={styles.cardTop}>
-          <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>STUDY GROUP · 8 PEOPLE</Text>
+          <Text style={[styles.meta, { color: colors.textPrimary }]}>STUDY GROUP · 8 PEOPLE</Text>
           <View style={[styles.pill, { backgroundColor: colors.bgCanvas, borderWidth: 1, borderColor: colors.borderSubtle }]}>
             <View style={[styles.pip, { backgroundColor: colors.brandSecondary }]} />
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>LIVE</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>LIVE</Text>
           </View>
         </View>
         <Text style={[theme.typography.poemTitle, { color: colors.textPrimary, marginTop: 10 }]}>The Midnight Ink Society</Text>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 4 }]}>Prompt: write a night poem</Text>
+        <Text style={[styles.copy, { color: colors.textPrimary, marginTop: 4 }]}>Prompt: write a night poem</Text>
         <View style={styles.split}>
           <View style={[styles.tile, { backgroundColor: colors.bgCanvas, borderColor: colors.borderMuted }]}>
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>LESSON</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>LESSON</Text>
             <Text style={[theme.typography.headerTitle, { color: colors.textPrimary, marginTop: 8 }]}>Sonnets</Text>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>The first 8 lines</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary }]}>The first 8 lines</Text>
             <View style={[styles.bar, { backgroundColor: colors.bgElevated }]}>
               <View style={[styles.barFill, { width: '80%', backgroundColor: colors.brandPrimary }]} />
             </View>
           </View>
           <View style={[styles.tile, { backgroundColor: colors.bgCanvas, borderColor: colors.borderMuted }]}>
-            <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>STREAK</Text>
+            <Text style={[styles.meta, { color: colors.brandSecondary }]}>STREAK</Text>
             <Text style={[theme.typography.displaySm, { color: colors.brandSecondary, marginTop: 6 }]}>7</Text>
-            <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>DAYS IN A ROW</Text>
-            <Text style={[theme.typography.labelMono, { color: colors.accent, marginTop: 8 }]}>KEEP GOING</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary }]}>DAYS IN A ROW</Text>
+            <Text style={[styles.meta, { color: colors.textPrimary, marginTop: 8 }]}>KEEP GOING</Text>
           </View>
         </View>
         <View style={[styles.challenge, { backgroundColor: colors.bgElevated, borderColor: colors.borderMuted }]}>
           <Ionicons name="pencil" size={16} color={colors.brandSecondary} />
           <View style={{ flex: 1 }}>
-            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Today’s challenge</Text>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Write 14 lines</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary, fontWeight: '700' }]}>Today’s challenge</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary }]}>Write 14 lines</Text>
           </View>
-          <Text style={[theme.typography.labelMono, styles.xp, { backgroundColor: colors.brandPrimary, color: colors.onBrand }]}>+50 XP</Text>
+          <Text style={[styles.meta, styles.xp, { backgroundColor: colors.brandPrimary, color: colors.onBrand }]}>+50 XP</Text>
         </View>
       </View>
       <View style={styles.pillars}>
         <View style={[styles.pillar, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
           <Ionicons name="school-outline" size={18} color={colors.brandSecondary} />
           <View style={{ flex: 1 }}>
-            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Poetry lessons</Text>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Sonnets, haiku, and free verse.</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary, fontWeight: '700' }]}>Poetry lessons</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary }]}>Sonnets, haiku, and free verse.</Text>
           </View>
         </View>
         <View style={[styles.pillar, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
           <Ionicons name="people-outline" size={18} color={colors.brandSecondary} />
           <View style={{ flex: 1 }}>
-            <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Write with others</Text>
-            <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Share notes and read each other’s poems.</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary, fontWeight: '700' }]}>Write with others</Text>
+            <Text style={[styles.copy, { color: colors.textPrimary }]}>Share notes and read each other’s poems.</Text>
           </View>
         </View>
       </View>
-      <Text style={[theme.typography.labelMono, styles.eyebrow, { color: colors.brandSecondary }]}>LEARN</Text>
+      <Text style={[styles.meta, styles.eyebrow, { color: colors.brandSecondary }]}>LEARN</Text>
       <Text style={[theme.typography.displaySm, styles.title, { color: colors.textPrimary }]}>Learn and meet poets</Text>
-      <Text style={[theme.typography.bodyMd, styles.body, { color: colors.textSecondary }]}>
+      <Text style={[styles.copy, styles.body, { color: colors.textPrimary }]}>
         Short lessons, quizzes, and a daily writing challenge. Then talk with other poets.
       </Text>
     </View>
@@ -291,6 +291,10 @@ const styles = StyleSheet.create({
   meter: { flexDirection: 'row', gap: 4, width: 92 },
   meterSeg: { flex: 1, height: 3, borderRadius: 2 },
   kicker: { flex: 1 },
+  meta: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.3 },
+  copy: { fontSize: 16, lineHeight: 24 },
+  verse: { fontSize: 18, lineHeight: 28, fontStyle: 'italic' },
+  buttonLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700' },
   scroll: { paddingBottom: 12 },
   floatRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: -10, zIndex: 2, paddingHorizontal: 8 },
   card: { borderWidth: 1, borderRadius: 12, padding: 16 },
@@ -304,7 +308,7 @@ const styles = StyleSheet.create({
   track: { width: 64, height: 4, borderRadius: 2, overflow: 'hidden' },
   trackFill: { width: '66%', height: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 6 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8 },
   eyebrow: { textAlign: 'center', marginTop: 22, marginBottom: 8 },
   title: { textAlign: 'center' },
   body: { textAlign: 'center', marginTop: 10 },

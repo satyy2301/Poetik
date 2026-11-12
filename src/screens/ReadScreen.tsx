@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import PoemCard from '../components/PoemCard';
 import PoemFilter from '../components/PoemFilter';
 import ScreenContainer from '../components/layout/ScreenContainer';
 import EmptyState from '../components/ui/EmptyState';
 import SkeletonPoemCard from '../components/loaders/SkeletonPoemCard';
-import { Poem, PoemFilters, PoemSort } from '../types/poem';
+import { Poem, PoemFilters, PoemSort, ShuffleCursor } from '../types/poem';
 import { fetchPoems, incrementPoemLikes } from '../services/poemService';
 import { openAuthorProfile, openPoemDetail } from '../navigation/navigationHelpers';
 import { getFollowingIds } from '../services/followService';
@@ -23,7 +23,6 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   const { theme } = useTheme();
   const [poems, setPoems] = useState<Poem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState<PoemFilters>({
@@ -34,17 +33,20 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
     authorId: null,
   });
   const [sort, setSort] = useState<PoemSort>('random');
-  const feedSeed = useRef(String(Date.now()));
+  const feedSeed = useRef(String(Math.random()));
+  const pageRef = useRef(0);
+  const cursorRef = useRef<ShuffleCursor | null>(null);
   const navigation = useNavigation<any>();
 
   const loadPage = useCallback(
-    async (pageToLoad: number, reset = false) => {
+    async (reset = false) => {
       setLoading(true);
       try {
         const followingIds = feedMode === 'following' && user?.id
           ? await getFollowingIds(user.id)
           : undefined;
 
+        const pageToLoad = reset ? 0 : pageRef.current + 1;
         const result = await fetchPoems({
           limit: PAGE_SIZE,
           page: pageToLoad,
@@ -55,11 +57,17 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
           },
           sort,
           shuffleSeed: feedSeed.current,
+          shuffleCursor: sort === 'random'
+            ? (reset
+              ? { start: Number(feedSeed.current), after: null, wrapped: false }
+              : cursorRef.current)
+            : null,
         });
 
         setPoems((prev) => (reset ? result.poems : [...prev, ...result.poems]));
         setHasMore(result.hasMore);
-        setPage(pageToLoad);
+        pageRef.current = pageToLoad;
+        cursorRef.current = result.shuffleCursor ?? null;
       } catch (error) {
         console.error('Error fetching poems:', error);
       } finally {
@@ -71,20 +79,21 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
   );
 
   useEffect(() => {
-    loadPage(0, true);
+    loadPage(true);
   }, [filters, sort, feedMode]);
 
   const handleRefresh = () => {
-    feedSeed.current = String(Date.now());
+    feedSeed.current = String(Math.random());
+    cursorRef.current = null;
     setRefreshing(true);
     setHasMore(true);
     hapticLight();
-    loadPage(0, true);
+    loadPage(true);
   };
 
   const handleLoadMore = () => {
     if (!hasMore || loading) return;
-    loadPage(page + 1, false);
+    loadPage(false);
   };
 
   const handleViewPoem = (poem: Poem) => {
@@ -145,6 +154,10 @@ const ReadScreen = ({ feedMode = 'all' }: ReadScreenProps) => {
           onEndReachedThreshold={0.5}
           onRefresh={handleRefresh}
           refreshing={refreshing}
+          initialNumToRender={6}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.list}
           ListEmptyComponent={

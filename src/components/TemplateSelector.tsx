@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,11 @@ type TemplateSelectorProps = {
 const TemplateSelector = ({ visible, onClose, onSelect, selectedForm }: TemplateSelectorProps) => {
   const [preview, setPreview] = useState<PoemTemplate | null>(null);
 
+  useEffect(() => {
+    if (!visible) return;
+    setPreview(POEM_TEMPLATES.find((item) => item.form === selectedForm) || null);
+  }, [visible, selectedForm]);
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -31,21 +36,21 @@ const TemplateSelector = ({ visible, onClose, onSelect, selectedForm }: Template
           <FlatList
             data={POEM_TEMPLATES}
             keyExtractor={(item) => item.id}
+            extraData={preview?.id}
             numColumns={2}
             columnWrapperStyle={styles.row}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.card,
-                  selectedForm === item.form && styles.cardSelected,
-                  preview?.id === item.id && styles.cardPreview,
-                ]}
-                onPress={() => setPreview(item)}
-              >
-                <Text style={styles.cardName}>{item.name}</Text>
-                <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-              </TouchableOpacity>
-            )}
+            renderItem={({ item }) => {
+              const active = preview?.id === item.id;
+              return (
+                <TouchableOpacity
+                  style={[styles.card, active && styles.cardSelected]}
+                  onPress={() => setPreview(item)}
+                >
+                  <Text style={styles.cardName}>{item.name}</Text>
+                  <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+                </TouchableOpacity>
+              );
+            }}
           />
 
           {preview && (
@@ -99,7 +104,6 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
   },
   cardSelected: { borderColor: palette.emerald, backgroundColor: palette.veil },
-  cardPreview: { borderColor: palette.emerald },
   cardName: { fontWeight: '700', color: palette.parchment, marginBottom: 4 },
   cardDesc: { fontSize: 12, color: palette.glacial },
   previewBox: {

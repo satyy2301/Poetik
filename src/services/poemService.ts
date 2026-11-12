@@ -8,6 +8,7 @@ import {
   FetchPoemsResult,
   Poem,
   SearchPoemsParams,
+  ShuffleCursor,
 } from '../types/poem';
 
 const POEM_SELECT = `
@@ -25,20 +26,20 @@ const POEM_SELECT = `
 `;
 
 const DEFAULT_LIMIT = 20;
-const ID_PAGE = 1000;
-
-let shuffleDeck: { key: string; ids: string[] } | null = null;
-
-const shuffleIds = (ids: string[]) => {
-  const copy = [...ids];
-  for (let index = copy.length - 1; index > 0; index -= 1) {
-    const swap = Math.floor(Math.random() * (index + 1));
-    const current = copy[index];
-    copy[index] = copy[swap];
-    copy[swap] = current;
-  }
-  return copy;
-};
+const SHUFFLE_SELECT = `
+  id,
+  title,
+  content,
+  era,
+  themes,
+  form,
+  like_count,
+  visibility,
+  created_at,
+  author_id,
+  shuffle_key,
+  author:authors(id, name, canonical, birth_year, death_year)
+`;
 
 const applyPoemFilters = (query: any, filters: FetchPoemsParams['filters'] = {}) => {
   let next = query;
@@ -51,55 +52,80 @@ const applyPoemFilters = (query: any, filters: FetchPoemsParams['filters'] = {})
   return next;
 };
 
-async function loadShuffleDeck(key: string, filters: FetchPoemsParams['filters'] = {}) {
-  if (shuffleDeck?.key === key) return shuffleDeck.ids;
+const missingShuffleKey = (error: { message?: string; code?: string } | null) => {
+  const message = `${error?.message || ''} ${error?.code || ''}`;
+  return message.includes('shuffle_key') || error?.code === '42703' || error?.code === 'PGRST204';
+};
 
-  const ids: string[] = [];
-  for (let from = 0; ; from += ID_PAGE) {
-    const { data, error } = await applyPoemFilters(
-      supabase.from('poems').select('id').eq('visibility', 'public'),
-      filters,
-    )
-      .order('id', { ascending: true })
-      .range(from, from + ID_PAGE - 1);
-    if (error) throw error;
-    for (const row of data || []) ids.push(row.id);
-    if (!data || data.length < ID_PAGE) break;
-  }
+const shuffleStart = (seed?: string) => {
+  const value = Number(seed);
+  if (Number.isFinite(value) && value >= 0 && value < 1) return value;
+  return Math.random();
+};
 
-  shuffleDeck = { key, ids: shuffleIds(ids) };
-  return shuffleDeck.ids;
+async function queryShufflePage(
+  filters: FetchPoemsParams['filters'],
+  limit: number,
+  bounds: { gte?: number; gt?: number; lt?: number },
+) {
+  let query = applyPoemFilters(
+    supabase.from('poems').select(SHUFFLE_SELECT).eq('visibility', 'public'),
+    filters,
+  ).order('shuffle_key', { ascending: true });
+  if (bounds.gte != null) query = query.gte('shuffle_key', bounds.gte);
+  if (bounds.gt != null) query = query.gt('shuffle_key', bounds.gt);
+  if (bounds.lt != null) query = query.lt('shuffle_key', bounds.lt);
+  return query.limit(limit);
 }
 
 async function fetchShuffledPoems({
   limit,
-  page,
   filters,
   shuffleSeed,
+  cursor,
 }: {
   limit: number;
-  page: number;
   filters: FetchPoemsParams['filters'];
   shuffleSeed?: string;
+  cursor?: ShuffleCursor | null;
 }): Promise<FetchPoemsResult> {
-  const key = [
-    shuffleSeed || 'feed',
-    filters?.era || '',
-    filters?.theme || '',
-    filters?.form || '',
-    filters?.language || '',
-    filters?.authorId || '',
-    filters?.followingOnly ? (filters.followingIds || []).join(',') : '',
-  ].join('|');
-  const ids = await loadShuffleDeck(key, filters);
-  const slice = ids.slice(page * limit, page * limit + limit);
-  if (slice.length === 0) return { poems: [], hasMore: false };
+  const start = cursor?.start ?? shuffleStart(shuffleSeed);
+  const wrapped = cursor?.wrapped ?? false;
+  const after = cursor?.after ?? null;
 
-  const { data, error } = await supabase.from('poems').select(POEM_SELECT).in('id', slice);
-  if (error) throw error;
-  const byId = new Map((data || []).map((row) => [row.id, normalizeAuthor(row)]));
-  const poems = slice.map((id) => byId.get(id)).filter((poem): poem is Poem => Boolean(poem));
-  return { poems, hasMore: (page + 1) * limit < ids.length };
+  const take = async (bounds: { gte?: number; gt?: number; lt?: number }, size: number) => {
+    const { data, error } = await queryShufflePage(filters, size, bounds);
+    if (error) throw error;
+    return data || [];
+  };
+
+  let rows: any[] = [];
+  let nowWrapped = wrapped;
+
+  if (!wrapped) {
+    const high = await take(after == null ? { gte: start } : { gt: after }, limit);
+    rows = high;
+    if (high.length < limit) {
+      const low = await take({ lt: start }, limit - high.length);
+      rows = high.concat(low);
+      nowWrapped = true;
+    }
+  } else {
+    const lowBounds = after == null ? { lt: start } : { gt: after, lt: start };
+    rows = await take(lowBounds, limit);
+    nowWrapped = true;
+  }
+
+  const lastKey = rows.length ? Number(rows[rows.length - 1].shuffle_key) : after;
+  return {
+    poems: rows.map(normalizeAuthor),
+    hasMore: rows.length === limit,
+    shuffleCursor: {
+      start,
+      after: Number.isFinite(lastKey) ? lastKey : null,
+      wrapped: nowWrapped,
+    },
+  };
 }
 
 const themeContainsFilter = (theme: string) => {
@@ -131,13 +157,18 @@ export const fetchPoems = async ({
   filters = {},
   sort = 'newest',
   shuffleSeed,
+  shuffleCursor,
 }: FetchPoemsParams): Promise<FetchPoemsResult> => {
   if (filters.followingOnly && !filters.followingIds?.length) {
     return { poems: [], hasMore: false };
   }
 
   if (sort === 'random') {
-    return fetchShuffledPoems({ limit, page, filters, shuffleSeed });
+    try {
+      return await fetchShuffledPoems({ limit, filters, shuffleSeed, cursor: shuffleCursor });
+    } catch (error) {
+      if (!missingShuffleKey(error as { message?: string; code?: string })) throw error;
+    }
   }
 
   const from = page * limit;
@@ -174,43 +205,36 @@ export const searchPoems = async ({
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const { data, error } = await supabase.rpc('search_poems', {
-    search_query: trimmed,
-    form_filter: form,
-    theme_filter: theme,
-    author_filter: authorId,
-    result_limit: limit,
-  });
-
-  if (error) {
-    let fallback = supabase
-      .from('poems')
-      .select(POEM_SELECT)
-      .eq('visibility', 'public')
-      .or(`title.ilike.%${trimmed}%,content.ilike.%${trimmed}%`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (form) fallback = fallback.ilike('form', form);
-    if (theme) fallback = fallback.contains('themes', [theme]);
-    if (authorId) fallback = fallback.eq('author_id', authorId);
-
-    const { data: fallbackData, error: fallbackError } = await fallback;
-    if (fallbackError) throw fallbackError;
-    return (fallbackData || []).map(normalizeAuthor);
-  }
-
-  const poemRows = (data || []) as Poem[];
-  if (poemRows.length === 0) return [];
-
-  const ids = poemRows.map((p) => p.id);
-  const { data: enriched, error: enrichError } = await supabase
+  let indexed = supabase
     .from('poems')
     .select(POEM_SELECT)
-    .in('id', ids);
+    .eq('visibility', 'public')
+    .textSearch('search_vector', trimmed, { type: 'websearch', config: 'english' })
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
-  if (enrichError) throw enrichError;
-  return (enriched || []).map(normalizeAuthor);
+  if (form) indexed = indexed.ilike('form', form);
+  if (theme) indexed = indexed.contains('themes', [theme]);
+  if (authorId) indexed = indexed.eq('author_id', authorId);
+
+  const { data, error } = await indexed;
+  if (!error) return (data || []).map(normalizeAuthor);
+
+  let fallback = supabase
+    .from('poems')
+    .select(POEM_SELECT)
+    .eq('visibility', 'public')
+    .ilike('title', `%${trimmed}%`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (form) fallback = fallback.ilike('form', form);
+  if (theme) fallback = fallback.contains('themes', [theme]);
+  if (authorId) fallback = fallback.eq('author_id', authorId);
+
+  const { data: fallbackData, error: fallbackError } = await fallback;
+  if (fallbackError) throw fallbackError;
+  return (fallbackData || []).map(normalizeAuthor);
 };
 
 export const publishPoem = async (

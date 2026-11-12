@@ -36,7 +36,7 @@ import {
   fetchVersions,
   DraftVersion,
 } from '../services/draftService';
-import { PoemTemplate, getTemplateByForm } from '../data/poemTemplates';
+import { PoemTemplate, POEM_TEMPLATES, getTemplateByForm } from '../data/poemTemplates';
 import { validateForm } from '../utils/formValidators';
 import {
   requestAIWriting,
@@ -237,11 +237,11 @@ const WriteScreen = ({ navigation }: WriteScreenProps) => {
   );
 
   const handleTemplateSelect = (template: PoemTemplate) => {
+    const current = content.trim();
+    const untouched = !current || POEM_TEMPLATES.some((item) => item.scaffold.trim() === current);
     setActiveTemplate(template);
     setSelectedForm(template.form);
-    if (!content.trim()) {
-      setContent(template.scaffold);
-    }
+    if (untouched) setContent(template.scaffold);
   };
 
   const handleRestoreVersion = (version: DraftVersion) => {

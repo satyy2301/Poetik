@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   FlatList,
   StyleSheet,
   Platform,
+  ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
@@ -22,9 +24,9 @@ import { Poem } from '../types/poem';
 import { Author } from '../types/author';
 import { openAuthorProfile, openPoemDetail, openUserProfile } from '../navigation/navigationHelpers';
 import { useAuth } from '../context/AuthContext';
-import FolioHeader from '../components/ui/FolioHeader';
 const RECENT_KEY = 'poetik_recent_searches';
-const TRENDING_TAGS = ['Sonnet', 'Haiku', 'Free Verse', 'Love', 'Nature', 'Gothic'];
+const TRENDING_TAGS = ['Love', 'Nature', 'Gothic', 'Night', 'Rain', 'Home'];
+const FORM_FILTERS = ['Sonnet', 'Haiku', 'Free Verse'] as const;
 
 type SearchResult =
   | { id: string; type: 'poem'; data: Poem }
@@ -42,46 +44,43 @@ const SearchScreen = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'poems' | 'authors' | 'users'>('all');
   const [poemFormFilter, setPoemFormFilter] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const requestId = useRef(0);
+  const recentRef = useRef<string[]>([]);
 
   useEffect(() => {
     AsyncStorage.getItem(RECENT_KEY).then((raw) => {
-      if (raw) setRecentSearches(JSON.parse(raw));
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      recentRef.current = saved;
+      setRecentSearches(saved);
     });
   }, []);
 
   const saveRecent = useCallback(async (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
-    const updated = [trimmed, ...recentSearches.filter((s) => s !== trimmed)].slice(0, 8);
+    const updated = [trimmed, ...recentRef.current.filter((term) => term !== trimmed)].slice(0, 8);
+    recentRef.current = updated;
     setRecentSearches(updated);
     await AsyncStorage.setItem(RECENT_KEY, JSON.stringify(updated));
-  }, [recentSearches]);
+  }, []);
 
-  useEffect(() => {
-    const delayedSearch = setTimeout(() => {
-      if (searchQuery.trim()) {
-        performSearch();
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-    return () => clearTimeout(delayedSearch);
-  }, [searchQuery, activeFilter, poemFormFilter]);
-
-  const performSearch = async () => {
+  const performSearch = useCallback(async (query: string) => {
+    const id = requestId.current + 1;
+    requestId.current = id;
     setIsLoading(true);
     try {
+      const wantPoems = activeFilter === 'all' || activeFilter === 'poems';
+      const wantPeople = activeFilter === 'all' || activeFilter === 'authors' || activeFilter === 'users';
+      const [poems, authors] = await Promise.all([
+        wantPoems ? searchPoems({ query, form: poemFormFilter, limit: 15 }) : Promise.resolve([]),
+        wantPeople ? searchAuthors(query, 10) : Promise.resolve([]),
+      ]);
+      if (id !== requestId.current) return;
+
       const results: SearchResult[] = [];
-      const query = searchQuery.trim();
-      await saveRecent(query);
-
-      if (activeFilter === 'all' || activeFilter === 'poems') {
-        const poems = await searchPoems({ query, form: poemFormFilter, limit: 15 });
-        results.push(...poems.map((poem) => ({ id: `poem-${poem.id}`, type: 'poem' as const, data: poem })));
-      }
-
-      if (activeFilter === 'all' || activeFilter === 'authors' || activeFilter === 'users') {
-        const authors = await searchAuthors(query, 10);
+      results.push(...poems.map((poem) => ({ id: `poem-${poem.id}`, type: 'poem' as const, data: poem })));
+      if (wantPeople) {
         const type = activeFilter === 'users' ? 'user' : 'author';
         results.push(
           ...authors.map((author) => ({
@@ -91,14 +90,29 @@ const SearchScreen = () => {
           })),
         );
       }
-
       setSearchResults(results);
+      await saveRecent(query);
     } catch (error) {
+      if (id !== requestId.current) return;
       console.error('Search error:', error);
     } finally {
-      setIsLoading(false);
+      if (id === requestId.current) setIsLoading(false);
     }
-  };
+  }, [activeFilter, poemFormFilter, saveRecent]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (!query) {
+      requestId.current += 1;
+      setSearchResults([]);
+      setIsLoading(false);
+      return;
+    }
+    const delayedSearch = setTimeout(() => {
+      performSearch(query);
+    }, 300);
+    return () => clearTimeout(delayedSearch);
+  }, [searchQuery, performSearch]);
 
   const handlePoemPress = (poem: Poem) => openPoemDetail(navigation, poem);
   const handleAuthorPress = (author: Author) => openAuthorProfile(navigation, author);
@@ -172,8 +186,8 @@ const SearchScreen = () => {
         <View style={styles.discoverySection}>
           {recentSearches.length > 0 && (
             <View style={styles.discoveryBlock}>
-              <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 8 }]}>
-                Recent Searches
+              <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+                Recent
               </Text>
               <View style={styles.chipRow}>
                 {recentSearches.map((term) =>
@@ -183,15 +197,12 @@ const SearchScreen = () => {
             </View>
           )}
           <View style={styles.discoveryBlock}>
-            <Text style={[theme.typography.labelBold, { color: colors.textPrimary, marginBottom: 8 }]}>
-              Trending Tags
+            <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>
+              Trending
             </Text>
             <View style={styles.chipRow}>
               {TRENDING_TAGS.map((tag) =>
-                renderChip(tag, poemFormFilter === tag, () => {
-                  setPoemFormFilter(tag);
-                  setSearchQuery(tag);
-                }),
+                renderChip(tag, false, () => setSearchQuery(tag)),
               )}
             </View>
           </View>
@@ -202,29 +213,31 @@ const SearchScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-        <FolioHeader kicker="SEARCH" title="Search" sentence="Find a poem, a poet, or a person." />
-      </View>
-      <View style={[styles.searchContainer, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
+      <View style={styles.searchContainer}>
         <View style={[styles.searchInputContainer, { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle }]}>
-          <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
+          <Ionicons name="search" size={18} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.textPrimary }, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
-            placeholder="Find a poem, a poet, or a person"
+            placeholder="Poems, poets, people"
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
+            autoCapitalize="none"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+            <TouchableOpacity onPress={() => setSearchQuery('')} accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <View style={[styles.filterContainer, { backgroundColor: colors.bgSurface, borderBottomColor: colors.borderMuted }]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterContainer}
+      >
         {(['all', 'poems', 'authors', 'users'] as const).map((filter) => (
           <TouchableOpacity
             key={filter}
@@ -237,43 +250,55 @@ const SearchScreen = () => {
             ]}
             onPress={() => setActiveFilter(filter)}
           >
-            <Text style={[theme.typography.bodySm, { color: activeFilter === filter ? colors.onBrand : colors.textPrimary }]}>
+            <Text style={[styles.filterLabel, { color: activeFilter === filter ? colors.onBrand : colors.textPrimary }]}>
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {(activeFilter === 'all' || activeFilter === 'poems') && (
-        <View style={styles.poemFiltersRow}>
-          {['Sonnet', 'Haiku', 'Free Verse', null].map((form) =>
-            renderChip(form || 'All forms', poemFormFilter === form, () => setPoemFormFilter(form)),
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.poemFiltersRow}
+        >
+          {renderChip('All forms', poemFormFilter == null, () => setPoemFormFilter(null))}
+          {FORM_FILTERS.map((form) =>
+            renderChip(form, poemFormFilter === form, () => setPoemFormFilter(form)),
           )}
-        </View>
+        </ScrollView>
       )}
 
       <ScreenContainer edges={[]} contentStyle={styles.resultsWrapper}>
-        {isLoading ? (
-          <View>
-            <SkeletonPoemCard />
-            <SkeletonPoemCard />
-          </View>
-        ) : (
-          <FlatList
-            data={searchResults}
-            keyExtractor={(item) => item.id}
-            renderItem={renderSearchResult}
-            ListHeaderComponent={ListHeader}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              searchQuery.trim() ? (
-                <EmptyState icon="search-outline" title="No results found" description="Try different keywords or filters." />
-              ) : (
-                <EmptyState icon="search-outline" title="Search for poems" description="Find verses, authors, and fellow poets." />
-              )
-            }
-          />
-        )}
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item) => item.id}
+          renderItem={renderSearchResult}
+          ListHeaderComponent={
+            <View>
+              {isLoading ? (
+                <ActivityIndicator color={colors.brandPrimary} style={styles.loading} />
+              ) : null}
+              <ListHeader />
+            </View>
+          }
+          initialNumToRender={6}
+          windowSize={7}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            isLoading ? (
+              <View>
+                <SkeletonPoemCard />
+              </View>
+            ) : searchQuery.trim() ? (
+              <EmptyState icon="search-outline" title="No results" description="Try a different word or form." />
+            ) : (
+              <EmptyState icon="search-outline" title="Search for poems" description="Find verses, authors, and fellow poets." />
+            )
+          }
+        />
       </ScreenContainer>
     </View>
   );
@@ -281,37 +306,37 @@ const SearchScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  searchContainer: { padding: 15, borderBottomWidth: 1 },
+  searchContainer: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 44,
     borderWidth: 1,
   },
-  searchIcon: { marginRight: 10 },
+  searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, fontFamily: 'Inter-Regular' },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 15,
-    paddingVertical: 4,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     gap: 8,
   },
   filterTab: {
-    paddingVertical: 8,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'transparent',
   },
+  filterLabel: { fontSize: 13, fontFamily: 'Inter-Bold' },
   poemFiltersRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   formChip: {
     paddingHorizontal: 12,
@@ -320,8 +345,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  discoverySection: { paddingVertical: 8 },
-  discoveryBlock: { marginBottom: 16 },
+  discoverySection: { paddingTop: 4, paddingBottom: 8 },
+  discoveryBlock: { marginBottom: 14 },
+  sectionLabel: { fontSize: 12, fontFamily: 'Inter-Bold', letterSpacing: 0.4, marginBottom: 8 },
+  loading: { marginVertical: 8 },
   resultsWrapper: { paddingHorizontal: 0, flex: 1 },
   authorResult: {
     flexDirection: 'row',
