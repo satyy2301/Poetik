@@ -34,17 +34,25 @@ export type PoemFilters = {
 
 export type PoemSort = 'newest' | 'popular' | 'random';
 
+export type ShuffleCursor = {
+  start: number;
+  after: number | null;
+  wrapped: boolean;
+};
+
 export type FetchPoemsParams = {
   limit?: number;
   page?: number;
   filters?: PoemFilters;
   sort?: PoemSort;
   shuffleSeed?: string;
+  shuffleCursor?: ShuffleCursor | null;
 };
 
 export type FetchPoemsResult = {
   poems: Poem[];
   hasMore: boolean;
+  shuffleCursor?: ShuffleCursor | null;
 };
 
 export type SearchPoemsParams = {

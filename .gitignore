@@ -78,6 +78,17 @@ yarn-error.log
 scripts/cache/
 src/scripts/cache/
 
+# Expo cache and local install builds
+.expo/
+*.apk
+
+# Release bundle copied into the Android project by export:embed
+android/app/src/main/assets/*.bundle
+android/app/src/main/res/raw/node_modules_*
+android/app/src/main/res/raw/assets_fonts_*
+android/app/src/main/res/raw/keep.xml
+android/app/src/main/res/drawable-*/node_modules_*
+
 # Environment variables
 .env
 .env.local

@@ -100,17 +100,17 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>SIGN IN</Text>
-          <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Welcome back</Text>
+          <Text style={[styles.meta, { color: colors.brandSecondary }]}>SIGN IN</Text>
+          <Text style={[styles.copy, { color: colors.textPrimary }]}>Welcome back</Text>
         </View>
         <Ionicons name="book-outline" size={22} color={colors.brandSecondary} />
       </View>
 
       <View style={[styles.hero, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[theme.typography.labelMono, { color: colors.accent }]}>YOUR DESK</Text>
+          <Text style={[styles.meta, { color: colors.brandSecondary }]}>YOUR DESK</Text>
           <Text style={[theme.typography.displaySm, { color: colors.textPrimary, marginTop: 6 }]}>Welcome back</Text>
-          <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 6 }]}>
+          <Text style={[styles.copy, { color: colors.textPrimary, marginTop: 6 }]}>
             Pick up the poems you left unfinished.
           </Text>
         </View>
@@ -119,18 +119,18 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
         </View>
       </View>
 
-      <Text style={[theme.typography.poemBody, styles.epigraph, { color: colors.textSecondary }]}>
+      <Text style={[styles.verse, styles.epigraph, { color: colors.textPrimary }]}>
         “Words are the soul’s quiet breath.”
       </Text>
-      <Text style={[theme.typography.labelMono, styles.folioMark, { color: colors.textMuted }]}>A SMALL HOUR FOR VERSE</Text>
+      <Text style={[styles.meta, styles.folioMark, { color: colors.textPrimary }]}>A SMALL HOUR FOR VERSE</Text>
 
       <View style={styles.labelRow}>
-        <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>EMAIL</Text>
+        <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Email</Text>
       </View>
       <View style={fieldStyle('email')}>
         <Ionicons name="create-outline" size={16} color={colors.textMuted} />
         <TextInput
-          style={[styles.input, theme.typography.bodyMd, { color: colors.textPrimary }]}
+          style={[styles.input, { color: colors.textPrimary }]}
           placeholder="you@email.com"
           placeholderTextColor={colors.textMuted}
           value={email}
@@ -143,12 +143,12 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
       </View>
 
       <View style={styles.labelRow}>
-        <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>PASSWORD</Text>
+        <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Password</Text>
       </View>
       <View style={fieldStyle('password')}>
         <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
         <TextInput
-          style={[styles.input, theme.typography.bodyMd, { color: colors.textPrimary }]}
+          style={[styles.input, { color: colors.textPrimary }]}
           placeholder="••••••••"
           placeholderTextColor={colors.textMuted}
           value={password}
@@ -169,10 +169,10 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
             size={18}
             color={remember ? colors.brandPrimary : colors.textMuted}
           />
-          <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Remember me</Text>
+          <Text style={[styles.copy, { color: colors.textPrimary }]}>Remember me</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleLostKey}>
-          <Text style={[theme.typography.bodySm, { color: colors.brandSecondary, textDecorationLine: 'underline' }]}>
+          <Text style={[styles.copy, { color: colors.brandSecondary, textDecorationLine: 'underline' }]}>
             Forgot password?
           </Text>
         </TouchableOpacity>
@@ -187,27 +187,27 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
           <ActivityIndicator color={colors.onBrand} />
         ) : (
           <>
-            <Text style={[theme.typography.labelBold, { color: colors.onBrand }]}>Sign in</Text>
+            <Text style={[styles.buttonLabel, { color: colors.onBrand }]}>Sign in</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.onBrand} />
           </>
         )}
       </TouchableOpacity>
 
-      <Text style={[theme.typography.labelMono, styles.or, { color: colors.textMuted }]}>OR</Text>
+      <Text style={[styles.copy, styles.or, { color: colors.textPrimary }]}>or</Text>
       <TouchableOpacity style={[styles.google, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]} onPress={handleGoogle}>
-        <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Continue with Google</Text>
+        <Text style={[styles.buttonLabel, { color: colors.textPrimary }]}>Continue with Google</Text>
       </TouchableOpacity>
 
       <View style={[styles.prompt, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
         <View style={[styles.pip, { backgroundColor: colors.brandSecondary }]} />
-        <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>TONIGHT</Text>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
+        <Text style={[styles.meta, { color: colors.brandSecondary }]}>TONIGHT</Text>
+        <Text style={[styles.copy, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
           “The Geometry of Rain”
         </Text>
       </View>
 
       <TouchableOpacity onPress={() => navigation.navigate('Signup')} style={styles.switchLink}>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+        <Text style={[styles.copy, { color: colors.textPrimary }]}>
           New here? <Text style={{ color: colors.brandSecondary }}>Create an account</Text>
         </Text>
       </TouchableOpacity>
@@ -217,6 +217,11 @@ const LoginScreen = ({ navigation }: { navigation: any }) => {
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  meta: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.3 },
+  copy: { fontSize: 16, lineHeight: 24 },
+  verse: { fontSize: 18, lineHeight: 28, fontStyle: 'italic' },
+  fieldLabel: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  buttonLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700' },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   headerTitles: { flex: 1, alignItems: 'center' },
   hero: { borderWidth: 1, borderRadius: 12, padding: 16, marginBottom: 18, flexDirection: 'row', gap: 12, alignItems: 'center' },
@@ -233,7 +238,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: 8,
   },
-  input: { flex: 1, paddingVertical: 10 },
+  input: { flex: 1, paddingVertical: 12, fontSize: 16, lineHeight: 22 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, gap: 8 },
   remember: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   submit: {

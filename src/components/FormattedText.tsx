@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TextStyle } from 'react-native';
+import { Text, TextStyle, View } from 'react-native';
 import { parseInlineMarkup } from '../utils/inlineMarkup';
 
 type FormattedTextProps = {
@@ -10,10 +10,11 @@ type FormattedTextProps = {
 
 const FormattedText = ({ value, style, numberOfLines }: FormattedTextProps) => {
   const lines = value.split('\n');
+  const visible = numberOfLines ? lines.slice(0, numberOfLines) : lines;
 
   return (
-    <Text style={style} numberOfLines={numberOfLines}>
-      {lines.map((line, lineIndex) => {
+    <View style={{ width: '100%', alignSelf: 'stretch' }}>
+      {visible.map((line, lineIndex) => {
         let content = line;
         let heading = false;
         if (content.startsWith('### ')) {
@@ -31,8 +32,11 @@ const FormattedText = ({ value, style, numberOfLines }: FormattedTextProps) => {
 
         const pieces = parseInlineMarkup(content);
         return (
-          <Text key={lineIndex} style={heading ? { fontSize: 20, fontWeight: '600' } : undefined}>
-            {pieces.map((piece, index) => (
+          <Text
+            key={lineIndex}
+            style={[style, heading ? { fontSize: 20, fontWeight: '600' } : null, { paddingRight: 6 }]}
+          >
+            {pieces.length === 0 ? ' ' : pieces.map((piece, index) => (
               <Text
                 key={index}
                 style={{
@@ -48,11 +52,10 @@ const FormattedText = ({ value, style, numberOfLines }: FormattedTextProps) => {
                 {piece.text}
               </Text>
             ))}
-            {lineIndex < lines.length - 1 ? '\n' : ''}
           </Text>
         );
       })}
-    </Text>
+    </View>
   );
 };
 

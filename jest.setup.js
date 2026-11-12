@@ -22,8 +22,6 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => ({ params: {} }),
 }));
 
-jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
-
 jest.mock('expo-linear-gradient', () => ({
   LinearGradient: 'LinearGradient',
 }));

@@ -91,23 +91,23 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
           <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerTitles}>
-          <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>CREATE ACCOUNT</Text>
-          <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>Join the reading room</Text>
+          <Text style={[styles.meta, { color: colors.brandSecondary }]}>CREATE ACCOUNT</Text>
+          <Text style={[styles.copy, { color: colors.textPrimary }]}>Join the reading room</Text>
         </View>
         <View style={{ width: 22 }} />
       </View>
 
       <View style={[styles.hero, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
-        <Text style={[theme.typography.labelMono, { color: colors.brandSecondary }]}>YOUR PEN NAME</Text>
+        <Text style={[styles.meta, { color: colors.brandSecondary }]}>YOUR PEN NAME</Text>
         <Text style={[theme.typography.displaySm, { color: colors.textPrimary, marginTop: 6 }]}>
           Start your <Text style={{ fontStyle: 'italic', color: colors.brandSecondary }}>folio</Text>
         </Text>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary, marginTop: 6 }]}>
+        <Text style={[styles.copy, { color: colors.textPrimary, marginTop: 6 }]}>
           A quiet place to read, write, and learn poetry.
         </Text>
       </View>
 
-      <Text style={[theme.typography.labelMono, styles.label, { color: colors.textSecondary }]}>WHAT DO YOU LIKE TO WRITE?</Text>
+      <Text style={[styles.fieldLabel, styles.label, { color: colors.textPrimary }]}>What do you like to write?</Text>
       <View style={styles.traditions}>
         {traditions.map((item) => {
           const active = tradition === item.id;
@@ -123,10 +123,10 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
                 },
               ]}
             >
-              <Text style={[theme.typography.labelBold, { color: active ? colors.brandSecondary : colors.textPrimary }]}>
+              <Text style={[styles.copy, { color: active ? colors.brandSecondary : colors.textPrimary, fontWeight: '700' }]}>
                 {item.title}
               </Text>
-              <Text style={[theme.typography.labelMono, { color: colors.textMuted, marginTop: 4, textAlign: 'center' }]}>
+              <Text style={[styles.copy, { color: colors.textPrimary, marginTop: 4, textAlign: 'center', fontSize: 14 }]}>
                 {item.detail}
               </Text>
             </TouchableOpacity>
@@ -134,11 +134,11 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
         })}
       </View>
 
-      <Text style={[theme.typography.labelMono, styles.label, { color: colors.textSecondary }]}>PEN NAME</Text>
+      <Text style={[styles.fieldLabel, styles.label, { color: colors.textPrimary }]}>Pen name</Text>
       <View style={fieldStyle('name')}>
-        <Text style={[theme.typography.bodyMd, { color: colors.textMuted }]}>@</Text>
+        <Text style={[styles.copy, { color: colors.textPrimary }]}>@</Text>
         <TextInput
-          style={[styles.input, theme.typography.bodyMd, { color: colors.textPrimary }]}
+          style={[styles.input, { color: colors.textPrimary }]}
           placeholder="your.name"
           placeholderTextColor={colors.textMuted}
           value={username}
@@ -149,11 +149,11 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
         />
       </View>
 
-      <Text style={[theme.typography.labelMono, styles.label, { color: colors.textSecondary }]}>EMAIL</Text>
+      <Text style={[styles.fieldLabel, styles.label, { color: colors.textPrimary }]}>Email</Text>
       <View style={fieldStyle('email')}>
         <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
         <TextInput
-          style={[styles.input, theme.typography.bodyMd, { color: colors.textPrimary }]}
+          style={[styles.input, { color: colors.textPrimary }]}
           placeholder="you@email.com"
           placeholderTextColor={colors.textMuted}
           value={email}
@@ -166,15 +166,15 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
       </View>
 
       <View style={styles.cipherLabel}>
-        <Text style={[theme.typography.labelMono, { color: colors.textSecondary }]}>PASSWORD</Text>
-        <Text style={[theme.typography.labelMono, { color: colors.accent }]}>
-          {passed >= 3 ? 'STRONG ENOUGH' : 'KEEP GOING'}
+        <Text style={[styles.fieldLabel, { color: colors.textPrimary }]}>Password</Text>
+        <Text style={[styles.copy, { color: colors.textPrimary, fontSize: 14 }]}>
+          {passed >= 3 ? 'Strong enough' : 'Keep going'}
         </Text>
       </View>
       <View style={fieldStyle('password')}>
         <Ionicons name="key-outline" size={16} color={colors.textMuted} />
         <TextInput
-          style={[styles.input, theme.typography.bodyMd, { color: colors.textPrimary }]}
+          style={[styles.input, { color: colors.textPrimary }]}
           placeholder="••••••••"
           placeholderTextColor={colors.textMuted}
           value={password}
@@ -195,7 +195,7 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
         {checks.map((check) => {
           const ok = check.test(password);
           return (
-            <Text key={check.id} style={[theme.typography.labelMono, { color: ok ? colors.brandSecondary : colors.textMuted }]}>
+            <Text key={check.id} style={[styles.copy, { color: ok ? colors.brandSecondary : colors.textPrimary }]}>
               {ok ? '✓' : '·'} {check.label}
             </Text>
           );
@@ -208,7 +208,7 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
           size={18}
           color={pledged ? colors.brandPrimary : colors.textMuted}
         />
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary, flex: 1 }]}>
+        <Text style={[styles.copy, { color: colors.textPrimary, flex: 1 }]}>
           I agree to the community guidelines and to respect other writers’ work.
         </Text>
       </TouchableOpacity>
@@ -222,19 +222,19 @@ const SignupScreen = ({ navigation }: { navigation: any }) => {
           <ActivityIndicator color={colors.onBrand} />
         ) : (
           <>
-            <Text style={[theme.typography.labelBold, { color: colors.onBrand }]}>Create account</Text>
+            <Text style={[styles.buttonLabel, { color: colors.onBrand }]}>Create account</Text>
             <Ionicons name="arrow-forward" size={18} color={colors.onBrand} />
           </>
         )}
       </TouchableOpacity>
 
-      <Text style={[theme.typography.labelMono, styles.or, { color: colors.textMuted }]}>OR</Text>
+      <Text style={[styles.copy, styles.or, { color: colors.textPrimary }]}>or</Text>
       <TouchableOpacity style={[styles.google, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]} onPress={handleGoogle}>
-        <Text style={[theme.typography.labelBold, { color: colors.textPrimary }]}>Continue with Google</Text>
+        <Text style={[styles.buttonLabel, { color: colors.textPrimary }]}>Continue with Google</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.switchLink}>
-        <Text style={[theme.typography.bodySm, { color: colors.textSecondary }]}>
+        <Text style={[styles.copy, { color: colors.textPrimary }]}>
           Already have an account? <Text style={{ color: colors.brandSecondary }}>Sign in</Text>
         </Text>
       </TouchableOpacity>
@@ -247,6 +247,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   headerTitles: { flex: 1, alignItems: 'center' },
   hero: { borderWidth: 1, borderRadius: 12, padding: 16 },
+  meta: { fontSize: 13, lineHeight: 18, fontWeight: '600', letterSpacing: 0.3 },
+  copy: { fontSize: 16, lineHeight: 24 },
+  fieldLabel: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  buttonLabel: { fontSize: 17, lineHeight: 22, fontWeight: '700' },
   label: { marginBottom: 8, marginTop: 18 },
   traditions: { flexDirection: 'row', gap: 8 },
   tradition: { flex: 1, borderWidth: 1, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
@@ -259,11 +263,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: 8,
   },
-  input: { flex: 1, paddingVertical: 10 },
+  input: { flex: 1, paddingVertical: 12, fontSize: 16, lineHeight: 22 },
   cipherLabel: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18, marginBottom: 8 },
   meterTrack: { height: 4, borderRadius: 4, marginTop: 12, overflow: 'hidden' },
   meterFill: { height: 4 },
-  checks: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 },
+  checks: { gap: 6, marginTop: 12 },
   pledge: { flexDirection: 'row', gap: 8, marginTop: 18, alignItems: 'flex-start' },
   submit: {
     marginTop: 18,
