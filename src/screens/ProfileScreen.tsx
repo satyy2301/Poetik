@@ -1,6 +1,6 @@
 // src/screens/ProfileScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Switch, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Switch, Modal, TextInput } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../lib/supabase';
@@ -183,8 +183,8 @@ const ProfileScreen = ({ route }: any) => {
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bgCanvas }]} showsVerticalScrollIndicator={false}>
-      <ScreenContainer maxWidth={theme.layout.splitPaneMaxWidth} edges={[]} scrollable={false} contentStyle={styles.profileContent}>
+    <View style={[styles.container, { backgroundColor: colors.bgCanvas }]}>
+      <ScreenContainer maxWidth={theme.layout.splitPaneMaxWidth} edges={[]} scrollable contentStyle={styles.profileContent}>
         <View style={[styles.heroCard, { backgroundColor: colors.bgSurface, borderColor: colors.borderMuted }]}>
           <View style={styles.profileHeader}>
             <View style={[styles.avatarRing, { borderColor: colors.brandPrimary }]}>
@@ -193,7 +193,7 @@ const ProfileScreen = ({ route }: any) => {
               </View>
             </View>
             <View style={styles.headerInfo}>
-              <Text style={[styles.handle, { color: colors.textPrimary }]} numberOfLines={1}>@{handle}</Text>
+              <Text style={[styles.handle, { color: colors.textPrimary }]} numberOfLines={2}>@{handle}</Text>
               <Text style={[theme.typography.bodySm, { color: colors.textMuted, marginTop: 2 }]}>
                 {isOwnProfile ? 'Poet and writer' : 'Poet on Poetik'}
               </Text>
@@ -254,7 +254,7 @@ const ProfileScreen = ({ route }: any) => {
             {stats.map((stat) => (
               <TouchableOpacity key={stat.label} style={styles.statItem} onPress={stat.onPress}>
                 <Text style={[styles.statValue, { color: colors.textPrimary }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.textMuted }]}>{stat.label}</Text>
+                <Text style={[styles.statLabel, { color: colors.textMuted }]} numberOfLines={2}>{stat.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -434,21 +434,21 @@ const ProfileScreen = ({ route }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   profileContent: { paddingBottom: 32 },
-  heroCard: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingTop: 16, marginBottom: 14 },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  heroCard: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingTop: 16, marginBottom: 14, width: '100%', alignSelf: 'stretch' },
+  profileHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   avatarRing: { padding: 3, borderRadius: 32, borderWidth: 1 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: palette.ink, fontSize: 22, fontFamily: 'Inter-Bold' },
   headerInfo: { flex: 1, minWidth: 0 },
-  handle: { fontSize: 20, lineHeight: 26, fontFamily: 'Inter-Bold' },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  handle: { fontSize: 17, lineHeight: 22, fontFamily: 'Inter-Bold' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 },
   iconBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   followBtn: { borderWidth: 1, borderRadius: 17, paddingHorizontal: 14, height: 34, alignItems: 'center', justifyContent: 'center' },
   followText: { fontSize: 13, fontFamily: 'Inter-Bold' },
@@ -458,15 +458,15 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingVertical: 12,
   },
-  statItem: { flex: 1, alignItems: 'center', gap: 2 },
+  statItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2, paddingHorizontal: 2 },
   statValue: { fontSize: 16, lineHeight: 20, fontFamily: 'Inter-Bold' },
-  statLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0.2 },
+  statLabel: { fontSize: 11, lineHeight: 14, letterSpacing: 0.2, textAlign: 'center' },
   badgesRow: { paddingVertical: 12, borderBottomWidth: 1, marginBottom: 8 },
   badgesList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   badgeChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, gap: 4, maxWidth: 140 },
-  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 14, padding: 3, marginBottom: 14, gap: 3 },
-  tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 11 },
-  tabLabel: { fontSize: 13, fontFamily: 'Inter-Bold' },
+  tabs: { flexDirection: 'row', borderWidth: 1, borderRadius: 14, padding: 3, marginBottom: 14, gap: 3, width: '100%' },
+  tab: { flex: 1, minWidth: 0, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center', borderRadius: 11 },
+  tabLabel: { fontSize: 13, fontFamily: 'Inter-Bold', textAlign: 'center' },
   panelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   playlistItem: { flexDirection: 'row', alignItems: 'center', padding: 15, marginBottom: 8, borderRadius: 12, borderWidth: 1, gap: 12 },
   favAuthors: { marginBottom: 16 },
@@ -481,6 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 40,
     marginBottom: 14,
+    width: '100%',
   },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 60, paddingRight: 16 },

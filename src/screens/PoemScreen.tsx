@@ -27,6 +27,7 @@ const PoemScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { theme } = useTheme();
+  const { user } = useAuth();
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
 
@@ -118,9 +119,13 @@ const PoemScreen = () => {
       Alert.alert('Login required', 'Sign in to save poems to playlists.');
       return;
     }
-    const { data } = await getUserPlaylists(user.id);
-    setPlaylists(data);
-    setShowPlaylistModal(true);
+    try {
+      const { data } = await getUserPlaylists(user.id);
+      setPlaylists(data || []);
+      setShowPlaylistModal(true);
+    } catch {
+      Alert.alert('Error', 'Could not load your playlists');
+    }
   };
 
   const handleAddToPlaylist = async (playlistId: string, title: string) => {
@@ -313,16 +318,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderRadius: 16,
-    paddingHorizontal: 18,
+    paddingLeft: 16,
+    paddingRight: 20,
     paddingVertical: 20,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    alignItems: 'center',
     borderTopWidth: 1,
     paddingTop: 8,
+    paddingHorizontal: 8,
   },
-  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12 },
+  actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, paddingHorizontal: 4 },
   actionLabel: { fontSize: 13, fontWeight: '600' },
   modalOverlay: {
     flex: 1,

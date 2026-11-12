@@ -476,6 +476,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 1,
     overflow: 'hidden',
+    width: '100%',
+    alignSelf: 'stretch',
+    maxWidth: '100%',
   },
   authorRow: {
     flexDirection: 'row',
@@ -490,9 +493,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     flex: 1,
+    minWidth: 0,
   },
   authorMeta: {
     flex: 1,
+    minWidth: 0,
   },
   avatar: {
     width: 36,

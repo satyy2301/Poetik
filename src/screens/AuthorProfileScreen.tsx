@@ -360,7 +360,7 @@ const AuthorProfileScreen = () => {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.authorInfo}>
-          <Text style={[styles.authorName, { color: colors.text }]}>{author.name}</Text>
+          <Text style={[styles.authorName, { color: colors.text }]} numberOfLines={2}>{author.name}</Text>
           <Text style={[styles.authorSubtitle, { color: colors.textSecondary }]}>
             {author.canonical ? 'Canonical Poet' : 'Poet & Author'}
             {years ? ` · ${years}` : ''}
@@ -485,13 +485,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     gap: 8,
   },
-  backButton: { padding: 8, marginRight: 8 },
-  authorInfo: { flex: 1 },
-  authorName: { fontSize: 20, fontWeight: 'bold' },
+  backButton: { padding: 8 },
+  authorInfo: { flex: 1, minWidth: 120 },
+  authorName: { fontSize: 18, lineHeight: 24, fontWeight: 'bold' },
   authorSubtitle: { fontSize: 13, marginTop: 2 },
   actionRow: { flexDirection: 'row', gap: 8 },
   followButton: {
@@ -518,13 +518,13 @@ const styles = StyleSheet.create({
   readOnlyText: { fontSize: 12, fontWeight: '600' },
   statsSection: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 20,
+    paddingVertical: 16,
     marginBottom: 8,
+    width: '100%',
   },
-  statItem: { alignItems: 'center' },
-  statNumber: { fontSize: 22, fontWeight: 'bold' },
-  statLabel: { fontSize: 13, marginTop: 4 },
+  statItem: { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4 },
+  statNumber: { fontSize: 20, fontWeight: 'bold' },
+  statLabel: { fontSize: 12, marginTop: 4, textAlign: 'center' },
   bioSection: { padding: 20, marginBottom: 8 },
   bioText: { fontSize: 15, lineHeight: 22 },
   themesSection: { padding: 20, marginBottom: 8 },

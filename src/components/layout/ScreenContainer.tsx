@@ -31,17 +31,24 @@ const ScreenContainer = ({
     paddingRight: edges.includes('right') ? insets.right : 0,
   };
 
-  const innerStyle: ViewStyle = {
-    flex: 1,
+  const columnStyle: ViewStyle = {
     width: '100%',
     maxWidth: resolvedMaxWidth,
     alignSelf: 'center',
+    minWidth: 0,
+  };
+
+  const paddedStyle: ViewStyle = {
+    width: '100%',
+    minWidth: 0,
     paddingHorizontal: theme.spacing.lg,
     ...contentStyle,
   };
 
   const containerStyle: ViewStyle = {
     flex: 1,
+    width: '100%',
+    minWidth: 0,
     backgroundColor: theme.colors.bgCanvas,
     ...paddingStyle,
     ...style,
@@ -51,10 +58,11 @@ const ScreenContainer = ({
     return (
       <View style={containerStyle}>
         <ScrollView
-          contentContainerStyle={[innerStyle, { flexGrow: 1 }]}
+          style={styles.fill}
+          contentContainerStyle={[columnStyle, styles.grow]}
           showsVerticalScrollIndicator={false}
         >
-          {children}
+          <View style={[paddedStyle, styles.grow]}>{children}</View>
         </ScrollView>
       </View>
     );
@@ -62,9 +70,16 @@ const ScreenContainer = ({
 
   return (
     <View style={containerStyle}>
-      <View style={innerStyle}>{children}</View>
+      <View style={[columnStyle, styles.fill]}>
+        <View style={[paddedStyle, styles.fill]}>{children}</View>
+      </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  fill: { flex: 1, minWidth: 0, width: '100%' },
+  grow: { flexGrow: 1 },
+});
 
 export default ScreenContainer;
